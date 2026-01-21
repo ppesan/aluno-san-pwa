@@ -1,0 +1,34 @@
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Roboto, sans-serif;
+  background: #F0F4EE;
+  color: #181617;
+}
+
+header {
+  background: #43933C;
+  color: white;
+  padding: 1rem;
+  text-align: center;
+  font-weight: bold;
+}
+
+main {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.card {
+  background: white;
+  border-radius: 10px;
+  padding: 1rem;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0,0,0,.1);
+}
+
+.card:hover {
+  outline: 2px solid #43933C;
+}

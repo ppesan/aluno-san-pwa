@@ -1,0 +1,12 @@
+{
+  "name": "aluno.san",
+  "short_name": "aluno.san",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#F0F4EE",
+  "theme_color": "#43933C",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
