@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calculadora de Notas • aluno.san</title>
+</head>
+
+<body style="margin:0;">
+
+  <!-- Barra superior com voltar -->
+  <header style="
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    background: #43933C;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+    font-weight: 700;
+  ">
+    <a href="/" style="
+      color: #ffffff;
+      text-decoration: none;
+      font-size: 14px;
+      padding: 6px 8px;
+      border-radius: 8px;
+    ">⬅ Início</a>
+
+    <span style="font-size:15px; opacity:0.95;">
+      Calculadora
+    </span>
+  </header>
+
+  <!-- Conteúdo -->
+  <div style="text-align:center; padding:60px 16px; background-color:#F0F4EE; min-height:100vh;">
+    <h1 style="margin:0 0 10px 0; color:#181617;">
+      📝 Calculadora de Notas
+    </h1>
+
+    <p style="margin:0 0 26px 0; color:#555;">
+      Escolha o tipo de cálculo que você precisa:
+    </p>
+
+    <!-- Botão 1: Notas Parciais -->
+    <a href="./parciais.html"
+       style="
+         display:inline-block;
+         background-color:#43933C;
+         color:#fff;
+         padding:16px 36px;
+         border-radius:10px;
+         text-decoration:none;
+         font-size:18px;
+         font-weight:600;
+         box-shadow:0 4px 10px rgba(0,0,0,0.15);
+         margin:10px;
+       ">
+      📈 Notas Parciais
+    </a>
+
+    <!-- Botão 2: Exame -->
+    <a href="./exame.html"
+       style="
+         display:inline-block;
+         background-color:#43933C;
+         color:#fff;
+         padding:16px 36px;
+         border-radius:10px;
+         text-decoration:none;
+         font-size:18px;
+         font-weight:600;
+         box-shadow:0 4px 10px rgba(0,0,0,0.15);
+         margin:10px;
+       ">
+      📄 Nota de Exame
+    </a>
+
+    <p style="margin-top:26px; color:#555; font-size:13px;">
+      Dica: se algo parecer desatualizado, feche e reabra o app.
+    </p>
+  </div>
+
+</body>
+</html>

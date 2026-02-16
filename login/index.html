@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Login Institucional - aluno.san</title>
+
+  <meta name="theme-color" content="#2e7d32" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" href="/icon-192.png" />
+  <link rel="stylesheet" href="/style.css" />
+  <meta name="robots" content="noindex,nofollow" />
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">aluno.san</div>
+      <div class="subtitle">Login institucional</div>
+    </div>
+  </header>
+
+  <main class="container" style="max-width:720px;margin:0 auto;">
+    <section class="list">
+      <div class="card" style="display:block;">
+        <p class="card-title" style="margin:0;">Entrar com Google</p>
+
+        <p class="card-desc" style="white-space:normal;max-width:none;">
+          Use sua conta <strong>@iffarroupilha.edu.br</strong> para acessar a Área dos Professores.
+        </p>
+
+        <div style="margin-top:16px;">
+          <!-- Google Identity Services -->
+          <div id="g_id_onload"
+            data-client_id="573655605105-tpnarv40ivdlg8rq7g0obrl2b9c9qquf.apps.googleusercontent.com"
+            data-callback="onGoogleCredential"
+            data-auto_prompt="false">
+          </div>
+
+          <div class="g_id_signin"
+            data-type="standard"
+            data-size="large"
+            data-theme="outline"
+            data-text="signin_with"
+            data-shape="rectangular"
+            data-logo_alignment="left">
+          </div>
+        </div>
+
+        <p id="status" class="card-desc" style="margin-top:12px;white-space:normal;max-width:none;"></p>
+
+        <div style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end;">
+          <a class="btn btn-ghost" href="/" style="text-decoration:none;display:inline-flex;align-items:center;">
+            Voltar
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <script>
+    async function onGoogleCredential(response) {
+      const status = document.getElementById("status");
+      status.textContent = "Validando login...";
+
+      try {
+        const res = await fetch("/api/session", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ credential: response.credential }),
+          credentials: "include",
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          status.textContent = data?.error || "Falha no login.";
+          return;
+        }
+
+        status.textContent = "Login realizado com sucesso.";
+        const next = new URL(location.href).searchParams.get("next") || "/prof/";
+        location.href = next;
+
+      } catch (err) {
+        status.textContent = "Erro de rede ao validar login.";
+      }
+    }
+    window.onGoogleCredential = onGoogleCredential;
+  </script>
+</body>
+</html>

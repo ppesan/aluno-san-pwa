@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calculadora de Notas</title>
+
+  <style>
+    :root{
+      --primary:#43933C;
+      --accent:#C03028;
+      --bg:#F0F4EE;
+      --text:#181617;
+      --card:#FFFFFF;
+      --border:rgba(24,22,23,.12);
+      --shadow: 0 8px 22px rgba(0,0,0,.08);
+      --radius: 14px;
+    }
+
+    *{ box-sizing: border-box; }
+
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.35;
+    }
+
+    header{
+      background: var(--primary);
+      color: #fff;
+      padding: 16px 14px;
+      text-align: center;
+      font-weight: 800;
+      letter-spacing: .2px;
+    }
+
+    header small{
+      display:block;
+      opacity:.9;
+      font-weight:600;
+      margin-top:4px;
+      font-size: 12px;
+    }
+
+    .page{
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    .hint{
+      background: rgba(67,147,60,.08);
+      border: 1px solid rgba(67,147,60,.18);
+      padding: 12px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      margin: 0 0 14px 0;
+    }
+
+    /* Layout:
+       - Mobile: 1 coluna (uma calculadora embaixo da outra)
+       - Desktop: 2 colunas (opcional; melhora uso em PCs)
+    */
+    .wrapper{
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+    @media (min-width: 900px){
+      .wrapper{
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+    }
+
+    .card{
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+
+    .card h1{
+      font-size: 16px;
+      margin: 0 0 10px 0;
+      text-align: left;
+      font-weight: 800;
+    }
+
+    .card p.sub{
+      margin: 0 0 14px 0;
+      font-size: 13px;
+      color: rgba(24,22,23,.75);
+    }
+
+    label{
+      display: block;
+      margin-top: 10px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    input[type="number"]{
+      width: 100%;
+      padding: 10px 12px;
+      margin-top: 6px;
+      border: 1px solid rgba(24,22,23,.18);
+      border-radius: 10px;
+      font-size: 16px;
+      outline: none;
+      background: #fff;
+    }
+
+    input[type="number"]:focus{
+      border-color: rgba(67,147,60,.65);
+      box-shadow: 0 0 0 3px rgba(67,147,60,.18);
+    }
+
+    .actions{
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+
+    button{
+      flex: 1;
+      min-width: 180px;
+      padding: 10px 12px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    button:hover{ filter: brightness(0.96); }
+
+    button.secondary{
+      background: #fff;
+      color: var(--primary);
+      border: 1px solid rgba(67,147,60,.45);
+    }
+
+    .result{
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(24,22,23,.10);
+      background: rgba(240,244,238,.7);
+      font-size: 14px;
+    }
+
+    .result.ok{
+      border-color: rgba(67,147,60,.25);
+      background: rgba(67,147,60,.08);
+    }
+
+    .result.warn{
+      border-color: rgba(192,48,40,.25);
+      background: rgba(192,48,40,.06);
+    }
+
+    .muted{ color: rgba(24,22,23,.72); }
+
+    .sectionTitle{
+      margin-top: 14px;
+      font-weight: 900;
+      font-size: 13px;
+      color: rgba(24,22,23,.8);
+    }
+
+    .hidden{ display:none; }
+  </style>
+</head>
+
+<body>
+<header class="topbar">
+  <a href="./index.html" class="back">⬅ Voltar</a>
+  <span class="title">Calculadora</span>
+</header>
+  <header>
+    Calculadora de Notas
+    <small>aluno.san</small>
+  </header>
+
+  <div class="page">
+    <div class="hint">
+      Dica: no celular, as calculadoras ficam <strong>uma abaixo da outra</strong> para facilitar a leitura. Em telas grandes, elas podem aparecer lado a lado.
+    </div>
+
+    <div class="wrapper">
+      <!-- Calculadora 1 -->
+      <section class="card" aria-label="Calculadora com nota anual e exame">
+        <h1>Exame a partir da Nota Anual</h1>
+        <p class="sub">Cálculo com pesos: <strong>Nota anual 60%</strong> + <strong>Exame 40%</strong>. Mostra também a nota mínima no exame para aprovação.</p>
+
+        <label for="notaAnual">Nota Anual (0 a 10)</label>
+        <input type="number" id="notaAnual" placeholder="Ex.: 6,80" step="0.01" min="0" max="10">
+
+        <label for="notaExameFinal">Nota do Exame (0 a 10)</label>
+        <input type="number" id="notaExameFinal" placeholder="Ex.: 5,00" step="0.01" min="0" max="10">
+
+        <div class="actions">
+          <button onclick="calcularExameFinal()">Calcular</button>
+          <button class="secondary" onclick="limparCalc1()">Limpar</button>
+        </div>
+
+        <div class="result" id="resultadoExameFinal"></div>
+        <div class="result" id="notaMinimaExame"></div>
+      </section>
+
+      <!-- Calculadora 2 -->
+      <section class="card" aria-label="Calculadora com notas semestrais e simulação de exame">
+        <h1>Exame a partir das Notas Semestrais</h1>
+        <p class="sub">Cálculo com pesos: <strong>1º semestre 40%</strong> + <strong>2º semestre 60%</strong>. Se ficar em exame, habilita simulação.</p>
+
+        <label for="nota1">Nota 1º Semestre (0 a 10)</label>
+        <input type="number" id="nota1" placeholder="Ex.: 6,00" step="0.01" min="0" max="10">
+
+        <label for="nota2">Nota 2º Semestre (0 a 10)</label>
+        <input type="number" id="nota2" placeholder="Ex.: 7,00" step="0.01" min="0" max="10">
+
+        <div class="actions">
+          <button onclick="calcularNota()">Calcular</button>
+          <button class="secondary" onclick="limparCalc2()">Limpar</button>
+        </div>
+
+        <div class="result" id="resultado"></div>
+
+        <div id="exameContainer" class="hidden">
+          <div class="sectionTitle">Simulação de Exame</div>
+
+          <label for="notaExame">Nota do Exame (0 a 10)</label>
+          <input type="number" id="notaExame" placeholder="Ex.: 5,00" step="0.01" min="0" max="10">
+
+          <div class="actions">
+            <button onclick="calcularExame()">Calcular</button>
+          </div>
+
+          <div class="result" id="resultadoExame"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    // Helpers
+    function setResult(el, text, kind){
+      el.textContent = text;
+      el.classList.remove("ok","warn");
+      if (kind) el.classList.add(kind);
+    }
+
+    // Calculadora 1: Nota Anual e Exame (60/40). Aprovação: >= 5
+    function calcularExameFinal() {
+      const notaAnual = parseFloat(document.getElementById("notaAnual").value);
+      const notaExameFinal = parseFloat(document.getElementById("notaExameFinal").value);
+
+      const outMedia = document.getElementById("resultadoExameFinal");
+      const outMin = document.getElementById("notaMinimaExame");
+
+      if (isNaN(notaAnual) || notaAnual < 0 || notaAnual > 10) {
+        setResult(outMedia, "Por favor, insira uma nota anual válida (0 a 10).", "warn");
+        setResult(outMin, "", null);
+        return;
+      }
+
+      const notaMinima = (5 - (notaAnual * 0.6)) / 0.4;
+
+      if (!isNaN(notaExameFinal)) {
+        if (notaExameFinal < 0 || notaExameFinal > 10){
+          setResult(outMedia, "Por favor, insira uma nota de exame válida (0 a 10).", "warn");
+        } else {
+          const mediaFinal = (notaAnual * 0.6) + (notaExameFinal * 0.4);
+          setResult(outMedia, `Média Final: ${mediaFinal.toFixed(2)} ${mediaFinal >= 5 ? "(Aprovado)" : "(Reprovado)"}`, mediaFinal >= 5 ? "ok" : "warn");
+        }
+      } else {
+        setResult(outMedia, "Informe a nota do exame para calcular a média final (ou veja a nota mínima abaixo).", null);
+      }
+
+      if (notaMinima <= 10) {
+        setResult(outMin, `Nota mínima no exame para aprovação: ${notaMinima.toFixed(2)}`, notaMinima <= 10 ? "ok" : "warn");
+      } else {
+        setResult(outMin, "Nota mínima no exame para aprovação: Não é possível (nota anual muito baixa).", "warn");
+      }
+    }
+
+    function limparCalc1(){
+      document.getElementById("notaAnual").value = "";
+      document.getElementById("notaExameFinal").value = "";
+      setResult(document.getElementById("resultadoExameFinal"), "", null);
+      setResult(document.getElementById("notaMinimaExame"), "", null);
+    }
+
+    // Calculadora 2: Semestres (40/60). Se notaFinal >= 7 => aprovado; senão, em exame.
+    function calcularNota() {
+      const nota1 = parseFloat(document.getElementById("nota1").value);
+      const nota2 = parseFloat(document.getElementById("nota2").value);
+
+      const out = document.getElementById("resultado");
+      const exameContainer = document.getElementById("exameContainer");
+      const outExame = document.getElementById("resultadoExame");
+
+      if (isNaN(nota1) || isNaN(nota2) || nota1 < 0 || nota1 > 10 || nota2 < 0 || nota2 > 10) {
+        setResult(out, "Por favor, insira notas válidas entre 0 e 10.", "warn");
+        exameContainer.classList.add("hidden");
+        setResult(outExame, "", null);
+        return;
+      }
+
+      const notaFinal = (nota1 * 0.4) + (nota2 * 0.6);
+
+      if (notaFinal >= 7) {
+        setResult(out, `Nota Final: ${notaFinal.toFixed(2)} (Aprovado)`, "ok");
+        exameContainer.classList.add("hidden");
+        setResult(outExame, "", null);
+      } else {
+        setResult(out, `Nota Final: ${notaFinal.toFixed(2)} (Em Exame)`, "warn");
+        exameContainer.classList.remove("hidden");
+        setResult(outExame, "Informe a nota do exame para simular o resultado.", null);
+      }
+    }
+
+    // Exame: (notaFinal * 0.6) + (exame * 0.4) >= 5
+    function calcularExame() {
+      const nota1 = parseFloat(document.getElementById("nota1").value);
+      const nota2 = parseFloat(document.getElementById("nota2").value);
+      const notaExame = parseFloat(document.getElementById("notaExame").value);
+
+      const out = document.getElementById("resultadoExame");
+
+      if (isNaN(nota1) || isNaN(nota2) || nota1 < 0 || nota1 > 10 || nota2 < 0 || nota2 > 10) {
+        setResult(out, "Preencha corretamente as notas semestrais antes de simular o exame.", "warn");
+        return;
+      }
+
+      if (isNaN(notaExame) || notaExame < 0 || notaExame > 10) {
+        setResult(out, "Por favor, insira uma nota válida para o exame (0 a 10).", "warn");
+        return;
+      }
+
+      const notaFinal = (nota1 * 0.4) + (nota2 * 0.6);
+      const notaAposExame = (notaFinal * 0.6) + (notaExame * 0.4);
+
+      if (notaAposExame >= 5) {
+        setResult(out, `Nota após Exame: ${notaAposExame.toFixed(2)}. Aprovado!`, "ok");
+      } else {
+        setResult(out, `Nota após Exame: ${notaAposExame.toFixed(2)}. Reprovado.`, "warn");
+      }
+    }
+
+    function limparCalc2(){
+      document.getElementById("nota1").value = "";
+      document.getElementById("nota2").value = "";
+      document.getElementById("notaExame").value = "";
+      document.getElementById("exameContainer").classList.add("hidden");
+      setResult(document.getElementById("resultado"), "", null);
+      setResult(document.getElementById("resultadoExame"), "", null);
+    }
+  </script>
+</body>
+</html>

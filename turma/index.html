@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sua Turma • aluno.san</title>
+
+  <link rel="stylesheet" href="/style.css" />
+  <style>
+    .page{ max-width:860px; margin:0 auto; padding:16px; }
+    .cardbox{
+      background:#fff; border-radius:12px; padding:16px;
+      box-shadow:0 2px 10px rgba(0,0,0,.08);
+      margin-bottom:14px;
+    }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; }
+    .btn{
+      display:inline-block; padding:12px 14px; border-radius:10px;
+      text-decoration:none; font-weight:800; border:1px solid rgba(0,0,0,.12);
+      background:#fff; color:#181617;
+    }
+    .btn.primary{ background:#43933C; color:#fff; border-color:transparent; }
+    .btn.small{ padding:10px 12px; font-weight:800; }
+    .muted{ color:rgba(24,22,23,.75); font-size:14px; }
+    select{
+      width:100%; padding:12px 12px; border-radius:10px;
+      border:1px solid rgba(0,0,0,.18); font-size:16px;
+      background:#fff;
+    }
+    ul.links{ padding-left:18px; margin:10px 0 0 0; }
+    ul.links li{ margin:8px 0; }
+    .notice{
+      background:rgba(67,147,60,.08);
+      border:1px solid rgba(67,147,60,.22);
+      padding:12px; border-radius:12px;
+    }
+    .notice strong{ display:block; margin-bottom:6px; }
+    .hint{
+      background:rgba(24,22,23,.04);
+      border:1px solid rgba(24,22,23,.10);
+      padding:10px 12px;
+      border-radius:12px;
+      margin-top:10px;
+    }
+  </style>
+</head>
+
+<body>
+  <header class="topbar">
+    <a href="/" class="back">⬅ Início</a>
+    <span class="title">🧑‍🤝‍🧑 Sua Turma</span>
+  </header>
+
+  <main class="page">
+
+    <!-- TELA 1: escolher turma -->
+    <section class="cardbox" id="chooseBox">
+      <h2 style="margin:0 0 6px 0;">Escolha sua turma</h2>
+      <p class="muted" style="margin:0 0 12px 0;">
+        Selecione sua turma para ver <strong>calendários</strong>, <strong>links</strong> e <strong>avisos</strong>.
+      </p>
+
+      <label for="turmaSelect" class="muted" style="display:block;margin-bottom:6px;">
+        Minha turma:
+      </label>
+
+      <select id="turmaSelect">
+        <option value="">— Selecione —</option>
+
+        <optgroup label="Curso Técnico em Informática">
+          <option value="INF11">INF11</option>
+          <option value="INF21">INF21</option>
+          <option value="INF31">INF31</option>
+        </optgroup>
+
+        <optgroup label="Curso Técnico em Agropecuária">
+          <option value="AGP11">AGP11</option>
+          <option value="AGP21">AGP21</option>
+        </optgroup>
+
+        <optgroup label="Curso Técnico em Administração">
+          <option value="ADM11">ADM11</option>
+          <option value="ADM21">ADM21</option>
+          <option value="ADM31">ADM31</option>
+          <option value="ADM12">ADM12</option>
+          <option value="ADM22">ADM22</option>
+          <option value="ADM32">ADM32</option>
+        </optgroup>
+
+        <optgroup label="Curso Técnico em Agricultura">
+          <option value="AGR21">AGR21</option>
+          <option value="AGR31">AGR31</option>
+        </optgroup>
+      </select>
+
+      <div class="row" style="margin-top:12px;">
+        <button class="btn primary" id="saveBtn" type="button">Salvar</button>
+      </div>
+
+      <div class="hint">
+        <p class="muted" style="margin:0;">
+          Dica: você pode trocar a turma quando quiser.
+        </p>
+      </div>
+    </section>
+
+    <!-- TELA 2: conteúdo da turma -->
+    <section class="cardbox" id="turmaBox" style="display:none;">
+      <h2 style="margin:0 0 6px 0;">Minha turma: <span id="turmaName"></span></h2>
+      <p class="muted" style="margin:0 0 12px 0;">
+        Aqui você encontra links e avisos da sua turma.
+      </p>
+
+      <div class="notice" id="noticeBox" style="display:none;">
+        <strong>📌 Avisos</strong>
+        <div id="noticeText"></div>
+      </div>
+
+      <h3 style="margin:14px 0 6px 0;">🔗 Links úteis</h3>
+      <ul class="links" id="linksList"></ul>
+
+      <div class="row" style="margin-top:14px;">
+        <button class="btn small" id="changeBtn" type="button">Trocar turma</button>
+        <a class="btn small" href="/">Voltar ao início</a>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const KEY = "alunoSan_turma";
+
+    // ✅ SEU CSV publicado (aba turmas)
+    const TURMAS_CSV_URL =
+      "https://docs.google.com/spreadsheets/d/e/2PACX-1vSr4o5yxLQTP-MxL_gBjHC2LqsMbV8LdxlmOUG3VhGVUPMOy9m6n4pCMor4ghtHtDmLOYfkvGdIKCEA/pub?gid=2008054509&single=true&output=csv";
+
+    const chooseBox = document.getElementById("chooseBox");
+    const turmaBox = document.getElementById("turmaBox");
+    const turmaSelect = document.getElementById("turmaSelect");
+    const turmaName = document.getElementById("turmaName");
+    const noticeBox = document.getElementById("noticeBox");
+    const noticeText = document.getElementById("noticeText");
+    const linksList = document.getElementById("linksList");
+
+    // Estrutura carregada do CSV:
+    // TURMAS = { INF11: { avisos:[], links:[{titulo,url}] }, ... }
+    let TURMAS = {};
+
+    function showChoose() {
+      chooseBox.style.display = "block";
+      turmaBox.style.display = "none";
+    }
+
+    function showTurma(turma) {
+      chooseBox.style.display = "none";
+      turmaBox.style.display = "block";
+      renderTurma(turma);
+    }
+
+    function escapeHTML(str) {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function renderTurma(turma) {
+      const data = TURMAS[turma] || { avisos: [], links: [] };
+
+      turmaName.textContent = turma;
+
+      // Avisos
+      if (data.avisos.length) {
+        noticeBox.style.display = "block";
+        noticeText.innerHTML =
+          "<ul style='margin:0;padding-left:18px;'>" +
+          data.avisos.map(a => `<li>${escapeHTML(a)}</li>`).join("") +
+          "</ul>";
+      } else {
+        noticeBox.style.display = "none";
+        noticeText.innerHTML = "";
+      }
+
+      // Links
+      linksList.innerHTML = "";
+      if (data.links.length) {
+        data.links.forEach(l => {
+          const li = document.createElement("li");
+          const a = document.createElement("a");
+          a.href = l.url;
+          a.target = "_blank";
+          a.rel = "noopener";
+          a.textContent = l.titulo;
+          li.appendChild(a);
+          linksList.appendChild(li);
+        });
+      } else {
+        const li = document.createElement("li");
+        li.textContent = "Ainda não há links cadastrados para esta turma.";
+        linksList.appendChild(li);
+      }
+    }
+
+    // CSV parser robusto (suporta vírgulas e aspas)
+    function parseCSV(text) {
+      const rows = [];
+      let row = [];
+      let field = "";
+      let inQuotes = false;
+
+      for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        const next = text[i + 1];
+
+        if (inQuotes) {
+          if (c === '"' && next === '"') {
+            field += '"';
+            i++;
+          } else if (c === '"') {
+            inQuotes = false;
+          } else {
+            field += c;
+          }
+        } else {
+          if (c === '"') {
+            inQuotes = true;
+          } else if (c === ",") {
+            row.push(field);
+            field = "";
+          } else if (c === "\n") {
+            row.push(field);
+            rows.push(row);
+            row = [];
+            field = "";
+          } else if (c === "\r") {
+            // ignore
+          } else {
+            field += c;
+          }
+        }
+      }
+
+      // última linha
+      if (field.length || row.length) {
+        row.push(field);
+        rows.push(row);
+      }
+
+      if (!rows.length) return [];
+
+      const headers = rows[0].map(h => (h || "").trim().toLowerCase());
+      const out = [];
+
+      for (let r = 1; r < rows.length; r++) {
+        const cols = rows[r];
+        if (!cols || cols.every(v => !String(v || "").trim())) continue;
+
+        const obj = {};
+        headers.forEach((h, idx) => obj[h] = (cols[idx] ?? "").trim());
+        out.push(obj);
+      }
+
+      return out;
+    }
+
+    async function loadTurmasFromCSV() {
+      const url = TURMAS_CSV_URL + "&cb=" + Date.now(); // evita cache agressivo
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) throw new Error("Falha ao carregar CSV das turmas.");
+
+      const csvText = await res.text();
+      const rows = parseCSV(csvText);
+
+      const map = {};
+      rows
+        .filter(r => (r.ativo || "").toUpperCase() === "TRUE")
+        .sort((a, b) => Number(a.ordem || 9999) - Number(b.ordem || 9999))
+        .forEach(r => {
+          const turma = (r.turma || "").trim();
+          const tipo = (r.tipo || "").trim().toLowerCase();
+
+          if (!turma) return;
+          if (!map[turma]) map[turma] = { avisos: [], links: [] };
+
+          if (tipo === "aviso") {
+            const txt = (r.texto || "").trim();
+            if (txt) map[turma].avisos.push(txt);
+          }
+
+          if (tipo === "link") {
+            const url = (r.url || "").trim();
+            if (!url) return;
+            map[turma].links.push({
+              titulo: (r.titulo || "Link").trim(),
+              url
+            });
+          }
+        });
+
+      TURMAS = map;
+    }
+
+    document.getElementById("saveBtn").addEventListener("click", async () => {
+      const turma = turmaSelect.value.trim();
+      if (!turma) {
+        alert("Selecione sua turma.");
+        return;
+      }
+      localStorage.setItem(KEY, turma);
+
+      // garante que dados já carregaram
+      if (!Object.keys(TURMAS).length) {
+        try { await loadTurmasFromCSV(); } catch (e) {}
+      }
+      showTurma(turma);
+    });
+
+    document.getElementById("changeBtn").addEventListener("click", () => {
+      localStorage.removeItem(KEY);
+      turmaSelect.value = "";
+      showChoose();
+    });
+
+    (async function init() {
+      try {
+        await loadTurmasFromCSV();
+      } catch (e) {
+        console.warn("Não foi possível carregar TURMAS agora:", e);
+        TURMAS = {};
+      }
+
+      const saved = localStorage.getItem(KEY);
+      if (saved) {
+        turmaSelect.value = saved;
+        showTurma(saved);
+      } else {
+        showChoose();
+      }
+    })();
+  </script>
+</body>
+</html>

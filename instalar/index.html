@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Instalar aluno.san</title>
+
+  <style>
+    :root{
+      --primary:#43933C;
+      --accent:#C03028;
+      --bg:#F0F4EE;
+      --text:#181617;
+      --card:#FFFFFF;
+      --border:rgba(24,22,23,.12);
+      --shadow: 0 8px 22px rgba(0,0,0,.08);
+      --radius: 14px;
+    }
+    *{ box-sizing:border-box; }
+
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
+
+    header{
+      background: var(--primary);
+      color:#fff;
+      padding: 16px 14px;
+      text-align:center;
+      font-weight: 900;
+      letter-spacing:.2px;
+    }
+    header small{
+      display:block;
+      opacity:.92;
+      font-weight:600;
+      margin-top:4px;
+      font-size:12px;
+    }
+
+    .page{
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    .card{
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+
+    h1{
+      font-size: 18px;
+      margin: 0 0 8px 0;
+      font-weight: 900;
+    }
+
+    p{
+      margin: 8px 0;
+      font-size: 14px;
+    }
+
+    .muted{ color: rgba(24,22,23,.75); }
+
+    .steps{
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    @media (min-width: 900px){
+      .steps{ grid-template-columns: 1fr 1fr; }
+    }
+
+    .step{
+      border: 1px solid rgba(24,22,23,.12);
+      border-radius: 12px;
+      padding: 12px;
+      background: rgba(240,244,238,.65);
+    }
+
+    .num{
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      display: inline-grid;
+      place-items: center;
+      font-weight: 900;
+      color: #fff;
+      background: var(--primary);
+      margin-right: 8px;
+      font-size: 14px;
+    }
+
+    .badge{
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      border: 1px solid rgba(67,147,60,.28);
+      background: rgba(67,147,60,.10);
+      color: rgba(24,22,23,.90);
+      margin-top: 6px;
+    }
+
+    .warn{
+      border-left: 4px solid var(--accent);
+      background: rgba(192,48,40,.06);
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(192,48,40,.18);
+    }
+
+    .actions{
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    a.button{
+      display:inline-block;
+      text-decoration:none;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-weight: 900;
+      font-size: 15px;
+      border: 1px solid rgba(67,147,60,.45);
+      color: var(--primary);
+      background: #fff;
+      min-width: 220px;
+      text-align: center;
+    }
+
+    a.button.primary{
+      background: var(--primary);
+      color: #fff;
+      border-color: transparent;
+    }
+
+    .hidden{ display:none; }
+  </style>
+</head>
+
+<body>
+  <header>
+    Instalar aluno.san
+    <small>Coloque o aplicativo na tela do seu celular</small>
+  </header>
+
+  <div class="page">
+    <section class="card">
+      <h1>Como instalar o aluno.san</h1>
+      <p class="muted">
+        O <strong>aluno.san</strong> pode ser instalado no seu celular como um aplicativo.
+        Assim, você acessa tudo mais rápido, sem precisar digitar o endereço.
+      </p>
+      <p class="muted">
+        A instalação é simples e não ocupa espaço no seu celular.
+      </p>
+      <p class="muted">
+        <STRONG>Após ler abaixo como proceder, clique no link e faça o procedimento na página que abrir.</STRONG>
+      </p>
+
+      <div class="badge" id="deviceBadge">Detectando dispositivo…</div>
+
+      <div class="actions">
+        <a class="button primary" href="/" id="openHome">Abrir aluno.san</a>
+      </div>
+    </section>
+
+    <!-- iPhone / iPad -->
+    <section class="card hidden" id="iosBlock">
+      <h1>📱 iPhone / iPad</h1>
+      <p class="muted">
+        Para instalar no iPhone, use o navegador <strong>Safari</strong>
+        (o navegador padrão do celular).
+      </p>
+
+      <div class="steps">
+        <div class="step">
+          <p>
+            <span class="num">1</span>
+            Toque no botão <strong>Compartilhar</strong>
+            (quadrado com uma seta para cima).
+          </p>
+        </div>
+
+        <div class="step">
+          <p>
+            <span class="num">2</span>
+            Toque em <strong>Adicionar à Tela de Início</strong>
+            e depois em <strong>Adicionar</strong>.
+          </p>
+        </div>
+      </div>
+
+      <div class="warn" style="margin-top:12px;">
+        <p>
+          <strong>Importante:</strong><br>
+          Se você abriu o link pelo Instagram ou WhatsApp,
+          toque em <em>Abrir no Safari</em> antes de seguir os passos.
+        </p>
+      </div>
+    </section>
+
+    <!-- Android -->
+    <section class="card hidden" id="androidBlock">
+      <h1>🤖 Android</h1>
+      <p class="muted">
+        Para instalar no Android, use o navegador <strong>Google Chrome</strong>.
+      </p>
+
+      <div class="steps">
+        <div class="step">
+          <p>
+            <span class="num">1</span>
+            Toque nos <strong>três pontinhos (⋮)</strong> no canto da tela.
+          </p>
+        </div>
+
+        <div class="step">
+          <p>
+            <span class="num">2</span>
+            Toque em <strong>Adicionar à tela inicial</strong>
+            ou <strong>Instalar aplicativo</strong>.
+          </p>
+        </div>
+      </div>
+
+      <div class="warn" style="margin-top:12px;">
+        <p>
+          <strong>Não apareceu?</strong><br>
+          Role o menu para baixo e procure a opção com o nome
+          <em>Adicionar</em> ou <em>Instalar</em>.
+        </p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const ua = navigator.userAgent || "";
+    const isAndroid = /Android/i.test(ua);
+    const isIOS = /iPhone|iPad|iPod/i.test(ua);
+
+    const badge = document.getElementById("deviceBadge");
+    const iosBlock = document.getElementById("iosBlock");
+    const androidBlock = document.getElementById("androidBlock");
+
+    if (isIOS) {
+      badge.textContent = "Dispositivo detectado: iPhone / iPad";
+      iosBlock.classList.remove("hidden");
+    } else if (isAndroid) {
+      badge.textContent = "Dispositivo detectado: Android";
+      androidBlock.classList.remove("hidden");
+    } else {
+      badge.textContent = "Abra esta página no celular para instalar";
+    }
+
+    document.getElementById("openHome").setAttribute("href", "/");
+  </script>
+</body>
+</html>

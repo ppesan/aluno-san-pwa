@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>aluno.san (Professores)</title>
+
+  <meta name="theme-color" content="#2e7d32" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" href="/icon-192.png" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">aluno.san (Professores)</div>
+      <div class="subtitle">Área de organização docente</div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="hint" id="profHint">
+      🔒 Somente contas <b>@iffarroupilha.edu.br</b> acessam esta área.
+      <span id="profUser" style="display:block;margin-top:6px;opacity:.95;"></span>
+    </div>
+
+    <!-- IMPORTANTE: usamos o mesmo id da home para o app.js renderizar -->
+    <section class="list" id="modulesList"></section>
+
+    <div style="margin-top:14px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
+      <a class="btn btn-ghost" href="/" style="text-decoration:none;display:inline-flex;align-items:center;">Voltar ao app</a>
+      <button class="btn btn-primary" id="btnLogout" type="button">Sair</button>
+    </div>
+
+    <noscript>Ative o JavaScript para usar o aluno.san.</noscript>
+  </main>
+
+  <div id="modalRoot"></div>
+
+  <script src="/app.js" defer></script>
+
+  <script>
+    // Exibe e-mail logado e implementa "Sair"
+    async function refreshProfUser() {
+      try {
+        const res = await fetch("/api/session", { credentials: "include" });
+        const data = await res.json().catch(() => ({}));
+        const el = document.getElementById("profUser");
+        if (data && data.authenticated && data.email) {
+          el.textContent = "Logado como: " + data.email;
+        } else {
+          el.textContent = "";
+        }
+      } catch {
+        // silencioso
+      }
+    }
+
+    async function logout() {
+      try {
+        await fetch("/api/logout", { method: "POST", credentials: "include" });
+      } catch {}
+      location.href = "/";
+    }
+
+    document.getElementById("btnLogout").addEventListener("click", logout);
+    refreshProfUser();
+
+    // Service Worker: registro
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", async () => {
+        try {
+          await navigator.serviceWorker.register("/service-worker.js");
+        } catch (err) {
+          console.error("[SW] Falha ao registrar:", err);
+        }
+      });
+    }
+  </script>
+</body>
+</html>

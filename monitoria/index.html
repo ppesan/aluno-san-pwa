@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monitoria</title>
+
+  <style>
+    :root{
+      --primary:#43933C;
+      --accent:#C03028;
+      --bg:#F0F4EE;
+      --text:#181617;
+      --card:#FFFFFF;
+      --border:rgba(24,22,23,.12);
+      --shadow: 0 8px 22px rgba(0,0,0,.08);
+      --radius: 14px;
+    }
+    *{ box-sizing:border-box; }
+
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
+
+    header{
+      background: var(--primary);
+      color:#fff;
+      padding: 16px 14px;
+      text-align:center;
+      font-weight: 800;
+      letter-spacing:.2px;
+    }
+    header small{
+      display:block;
+      opacity:.92;
+      font-weight:600;
+      margin-top:4px;
+      font-size:12px;
+    }
+
+    .page{
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    .card{
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+
+    h1{
+      font-size: 18px;
+      margin: 0 0 8px 0;
+      font-weight: 900;
+    }
+
+    h2{
+      font-size: 15px;
+      margin: 0 0 8px 0;
+      font-weight: 900;
+    }
+
+    p{
+      margin: 8px 0;
+      font-size: 14px;
+    }
+
+    .muted{ color: rgba(24,22,23,.75); }
+
+    .badge{
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      border: 1px solid rgba(67,147,60,.28);
+      background: rgba(67,147,60,.10);
+      color: rgba(24,22,23,.90);
+      margin-top: 6px;
+    }
+
+    .grid{
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    @media (min-width: 900px){
+      .grid{
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    ul{
+      margin: 8px 0 0 18px;
+      padding: 0;
+      font-size: 14px;
+    }
+
+    .callout{
+      border-left: 4px solid var(--accent);
+      background: rgba(192,48,40,.06);
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(192,48,40,.18);
+    }
+
+    .kpi{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
+
+    .pill{
+      border: 1px solid rgba(24,22,23,.12);
+      background: rgba(240,244,238,.7);
+      padding: 8px 10px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+  </style>
+</head>
+
+<body>
+<header class="topbar">
+  <a href="/" class="back">⬅ Início</a>
+  <span class="title">ALUNO.SAN</span>
+</header>
+  <header>
+    Monitoria
+    <small>aluno.san</small>
+  </header>
+
+  <div class="page">
+
+<section class="card">
+  <h1>Monitorias oferecidas em 2026</h1>
+  <p class="muted">
+    A monitoria é oferecida, preferencialmente, às <strong>terças-feiras à tarde</strong>.
+  </p>
+
+  <div class="kpi">
+    <div class="pill">Dia preferencial: Terça</div>
+    <div class="pill">Turno: Tarde</div>
+  </div>
+
+  <h2 style="margin-top:16px;">Química</h2>
+  <ul>
+    <li><strong>Profª. Adriane</strong>: Monitor</li>
+    <li><strong>Prof. Vinícius</strong>: Monitor</li>
+  </ul>
+
+  <h2 style="margin-top:16px;">Física</h2>
+  <ul>
+    <li><strong>Prof. Willian Rubira da Silva</strong>: Monitor</li>
+  </ul>
+
+  <h2 style="margin-top:16px;">Matemática</h2>
+  <ul>
+    <li><strong>Profª. Cristiane Stamberg</strong>: Monitor</li>
+  </ul>
+</section>
+
+
+    <div class="grid">
+      <section class="card">
+        <h2>O que é?</h2>
+        <p>
+          É um momento extraclasse que o professor oferece aos estudantes através de seus monitores para ajudar nos estudos e esclarecer dúvidas relacionadas aos conteúdos das disciplinas.
+        </p>
+        <p>
+          Trata-se de uma oportunidade para os estudantes obterem êxito em seus estudos e fortalecerem o seu percurso de formação profissional.
+        </p>
+        <p>
+          A monitoria não substitui a Recuperação Paralela, que é realizada com o professor, ou por convite ou por convocação.
+        </p>
+
+      </section>
+<section class="card">
+  <h2>Como marcar Recuperação Paralela</h2>
+
+  <p>
+    Se você quiser marcar uma aula de <strong>Recuperação Paralela</strong>,
+    envie um e-mail para o seu professor ou utilize o botão abaixo para
+    entrar em contato com o setor responsável.
+  </p>
+
+  <a
+    href="mailto:rp.san@iffarroupilha.edu.br?subject=Solicitação%20de%20Recuperação%20Paralela"
+    class="btn-primary"
+  >
+    ✉️ Clique aqui para enviar um e-mail
+  </a>
+
+  <p class="muted" style="margin-top:12px;">
+    E-mail institucional: <strong>rp.san@iffarroupilha.edu.br</strong>
+  </p>
+  <p>
+    Os agendamentos ficam na Aba <strong>Recuperação Paralela</strong>, entre lá e marque sua presença!
+  </p>
+</section>
+
+      <section class="card">
+        <h2>É obrigatória?</h2>
+        <p>
+          Não é obrigatória, mas quando o estudante sentir a necessidade, deve marcar a monitoria.
+        </p>
+        <div class="callout">
+          <p>
+            Quando a disciplina não oferecer monitoria, o estudante deve requisitar a <strong>recuperação paralela</strong>.
+          </p>
+        </div>
+      </section>
+    </div>
+
+  </div>
+</body>
+</html>
