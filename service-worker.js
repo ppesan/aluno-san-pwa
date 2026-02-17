@@ -1,6 +1,6 @@
 self.addEventListener("install", e => {
   e.waitUntil(
-    caches.open("aluno-san-v1").then(cache =>
+    caches.open("aluno-san-wpa-v1.0").then(cache =>
       cache.addAll(["./", "./index.html", "./style.css", "./app.js"])
     )
   );
@@ -11,3 +11,4 @@ self.addEventListener("fetch", e => {
     caches.match(e.request).then(r => r || fetch(e.request))
   );
 });
+
