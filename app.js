@@ -1,15 +1,15 @@
 /* =========================
-   CONFIG — CSVs publicados
+   CONFIG – CSVs publicados
 ========================= */
 const CSV_URLS = {
   itens: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSr4o5yxLQTP-MxL_gBjHC2LqsMbV8LdxlmOUG3VhGVUPMOy9m6n4pCMor4ghtHtDmLOYfkvGdIKCEA/pub?gid=1651715340&single=true&output=csv",
-  avisos: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSr4o5yxLQTP-MxL_gBjHC2LqsMbV8LdxlmOUG3VhGVUPMOy9m6n4pCMor4ghtHtDmLOYfkvGdIKCEA/pub?gid=1684382034&single=true&output=csv",
-  config: ""
+  avisos: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSr4o5yxLQTP-MxL_gBjHC2LqsMbV8LdxlmOUG3VhGVUPMOy9m6n4pCMor4ghtHtDmLOYfkvGdIKCEA/pub?gid=1684382034&single=true&output=csv"
 };
+
 const INSTITUTION_DOMAIN = "iffarroupilha.edu.br";
 
 /* =========================
-   Params de controle
+   Params
 ========================= */
 const qs = new URLSearchParams(location.search);
 const FORCE_NET = qs.get("forceNet") === "1";
@@ -17,170 +17,104 @@ const FORCE_AVISO = qs.get("forceAviso") === "1";
 const IS_PROF_PATH = location.pathname.startsWith("/prof");
 
 /* =========================
-   Utilitários
+   Utils
 ========================= */
-function safeText(v) { return (v ?? "").toString().trim(); }
-function truthy(v) {
-  const s = safeText(v).toLowerCase();
-  // cobre TRUE/true, SIM/sim, etc.
-  return s === "true" || s === "1" || s === "yes" || s === "sim" || s === "ok" || s === "x";
-}
-function numOr(v, fallback = 999999) {
-  const n = Number(String(v).replace(",", "."));
-  return Number.isFinite(n) ? n : fallback;
-}
+const safe = v => (v ?? "").toString().trim();
+const truthy = v => safe(v).toLowerCase() === "true";
+const numOr = (v, f = 999999) => Number.isFinite(+v) ? +v : f;
 
-/* CSV parser (aspas + vírgula) */
-function parseCSV(csvText) {
-  const rows = [];
-  let cur = "";
-  let inQuotes = false;
-  let row = [];
+/* =========================
+   CSV Parser
+========================= */
+function parseCSV(text) {
+  const lines = text.split("\n").filter(l => l.trim());
+  const headers = lines[0].replace(/^\uFEFF/, "").split(",").map(h => h.trim().toLowerCase());
 
-  for (let i = 0; i < csvText.length; i++) {
-    const ch = csvText[i];
-    const next = csvText[i + 1];
-
-    if (ch === '"' && inQuotes && next === '"') { cur += '"'; i++; continue; }
-    if (ch === '"') { inQuotes = !inQuotes; continue; }
-
-    if (ch === "," && !inQuotes) { row.push(cur); cur = ""; continue; }
-
-    if ((ch === "\n" || ch === "\r") && !inQuotes) {
-      if (ch === "\r" && next === "\n") i++;
-      row.push(cur);
-      rows.push(row);
-      row = [];
-      cur = "";
-      continue;
-    }
-    cur += ch;
-  }
-
-  if (cur.length || row.length) { row.push(cur); rows.push(row); }
-
-  const cleaned = rows.filter(r => r.some(c => safeText(c) !== ""));
-  if (!cleaned.length) return [];
-
-  // Normaliza headers: remove BOM e força minúsculas
-  const headers = cleaned[0].map(h => safeText(h).replace(/^\uFEFF/, "").toLowerCase());
-
-  return cleaned.slice(1).map(cols => {
+  return lines.slice(1).map(line => {
+    const cols = line.split(",");
     const obj = {};
-    headers.forEach((h, idx) => obj[h] = cols[idx] ?? "");
+    headers.forEach((h, i) => obj[h] = cols[i] ?? "");
     return obj;
   });
 }
 
 async function fetchCSV(url) {
-  if (!url) return [];
   const u = new URL(url);
-  if (FORCE_NET) u.searchParams.set("_ts", Date.now().toString());
+  if (FORCE_NET) u.searchParams.set("_ts", Date.now());
 
   const res = await fetch(u.toString(), { cache: FORCE_NET ? "no-store" : "default" });
-  if (!res.ok) throw new Error(`Falha ao carregar CSV: ${res.status}`);
   return parseCSV(await res.text());
 }
 
 /* =========================
-   Sessão (prof)
+   Sessão
 ========================= */
 async function getSession() {
   try {
-    const res = await fetch("/api/session", { method: "GET", credentials: "include" });
+    const res = await fetch("/api/session", { credentials: "include" });
     if (!res.ok) return { authenticated: false };
     return await res.json();
   } catch {
     return { authenticated: false };
   }
 }
-function isInstitutionalEmail(email) {
-  const domain = (safeText(email).split("@")[1] || "").toLowerCase();
-  return domain === INSTITUTION_DOMAIN;
+
+function isInstitutional(email) {
+  return safe(email).endsWith("@" + INSTITUTION_DOMAIN);
 }
 
 /* =========================
-   Render de Cards
+   Render Card
 ========================= */
-function buildCard({ emoji = "➡️", title, desc, href }) {
+function buildCard({ title, desc, href }) {
   const a = document.createElement("a");
   a.className = "card";
   a.href = href || "#";
 
-  const left = document.createElement("div");
-  left.className = "card-left";
-
-  const e = document.createElement("div");
-  e.className = "card-emoji";
-  e.textContent = emoji;
-
-  const texts = document.createElement("div");
-  texts.className = "card-texts";
-
-  const h = document.createElement("p");
+  const h = document.createElement("div");
   h.className = "card-title";
   h.textContent = title;
 
-  const d = document.createElement("p");
+  const d = document.createElement("div");
   d.className = "card-desc";
   d.textContent = desc || "";
 
-  texts.appendChild(h);
-  if (desc) texts.appendChild(d);
+  a.appendChild(h);
+  if (desc) a.appendChild(d);
 
-  left.appendChild(e);
-  left.appendChild(texts);
-
-  const chevron = document.createElement("div");
-  chevron.className = "card-chevron";
-  chevron.textContent = "›";
-
-  a.appendChild(left);
-  a.appendChild(chevron);
   return a;
 }
 
-function buildProfCard({ session }) {
-  // Só existe na HOME. No /prof/ não precisa.
+/* =========================
+   Área Professor (Home)
+========================= */
+async function renderProfCard() {
   const slot = document.getElementById("profCardSlot");
   if (!slot) return;
 
   slot.innerHTML = "";
 
-  const authenticated = !!session?.authenticated;
-  const email = safeText(session?.email);
-  const institutional = authenticated && isInstitutionalEmail(email);
+  const session = await getSession();
+  const auth = session?.authenticated;
+  const email = safe(session?.email);
 
-  // Se logou com email não institucional, não mostra o card
-  if (authenticated && !institutional) return;
+  if (auth && !isInstitutional(email)) return;
 
-  let card;
-  if (!authenticated) {
-    const next = encodeURIComponent("/prof/");
-    card = buildCard({
-      emoji: "🔒",
+  if (!auth) {
+    const card = buildCard({
       title: "Área dos Professores",
-      desc: "Entrar com Google institucional para acessar.",
-      href: `/login/?next=${next}`
+      desc: "Entrar com Google institucional.",
+      href: "/login/?next=" + encodeURIComponent("/prof/")
     });
-    card.classList.add("card-prof");
     slot.appendChild(card);
     return;
   }
 
-  card = buildCard({
-    emoji: "👨‍🏫",
+  const card = buildCard({
     title: "Painel do Professor",
-    desc: email ? `Logado como: ${email}` : "Acesso autorizado.",
+    desc: "Logado como: " + email,
     href: "/prof/"
   });
-  card.classList.add("card-prof");
-
-  const badge = document.createElement("span");
-  badge.className = "badge";
-  badge.textContent = "Autorizado";
-  card.querySelector(".card-chevron")?.remove();
-  card.appendChild(badge);
 
   slot.appendChild(card);
 }
@@ -200,134 +134,78 @@ function showModal({ title, text, onClose }) {
   const modal = document.createElement("div");
   modal.className = "modal";
 
-  const h2 = document.createElement("h2");
-  h2.textContent = title || "Aviso";
+  modal.innerHTML = `
+    <h2>${title}</h2>
+    <p>${text}</p>
+    <div class="modal-actions">
+      <button class="btn btn-primary">Entendi</button>
+    </div>
+  `;
 
-  const p = document.createElement("p");
-  p.textContent = text || "";
-
-  const actions = document.createElement("div");
-  actions.className = "modal-actions";
-
-  const btn = document.createElement("button");
-  btn.className = "btn btn-primary";
-  btn.textContent = "Entendi";
-  btn.addEventListener("click", () => {
+  modal.querySelector("button").onclick = () => {
     root.innerHTML = "";
     onClose && onClose();
-  });
+  };
 
-  actions.appendChild(btn);
-  modal.appendChild(h2);
-  modal.appendChild(p);
-  modal.appendChild(actions);
   backdrop.appendChild(modal);
-
-  backdrop.addEventListener("click", (ev) => {
-    if (ev.target === backdrop) btn.click();
-  });
-
   root.appendChild(backdrop);
 }
 
 async function handleAvisos() {
-  try {
-    const avisos = await fetchCSV(CSV_URLS.avisos);
-    if (!Array.isArray(avisos) || !avisos.length) return;
+  const avisos = await fetchCSV(CSV_URLS.avisos);
+  const ativo = avisos.find(a => truthy(a.ativo));
+  if (!ativo) return;
 
-    // Procura primeiro aviso ativo
-    const ativo = avisos.find(a => truthy(a.ativo));
-    if (!ativo) return;
+  const id = safe(ativo.aviso_id || ativo.titulo);
+  const key = "aviso_" + id;
 
-    const avisoId = safeText(ativo.aviso_id || ativo.id || ativo.titulo || "aviso");
-    const key = `aviso_visto_${avisoId}`;
+  if (localStorage.getItem(key) && !FORCE_AVISO) return;
 
-    const jaVisto = localStorage.getItem(key) === "1";
-    if (jaVisto && !FORCE_AVISO) return;
-
-    showModal({
-      title: safeText(ativo.titulo) || "Aviso",
-      text: safeText(ativo.texto) || "",
-      onClose: () => localStorage.setItem(key, "1")
-    });
-  } catch {
-    // silencioso
-  }
+  showModal({
+    title: ativo.titulo,
+    text: ativo.texto,
+    onClose: () => localStorage.setItem(key, "1")
+  });
 }
 
 /* =========================
-   Carregar itens e renderizar
+   Render Principal
 ========================= */
-function canShowByAccess(accessValue) {
-  const a = safeText(accessValue).toLowerCase();
-
-  // compatibilidade: se tiver "ambos" antigo, tratamos como público
-  if (a === "ambos") return true;
-
-  if (IS_PROF_PATH) {
-    // Área professor: só "prof"
-    return a === "prof";
-  }
-
-  // Home: "publico" e "aluno"
-  return a === "publico" || a === "aluno";
-}
-
-function getModulesContainer() {
-  return document.getElementById("modulesList") || document.getElementById("modules");
-}
-
-async function loadAndRender() {
-  const list = getModulesContainer();
+async function load() {
+  const list = document.getElementById("modulesList");
   if (!list) return;
+
   list.innerHTML = "";
 
-  // Se estiver em /prof, exige login institucional
   if (IS_PROF_PATH) {
     const session = await getSession();
-    const email = safeText(session?.email);
-    if (!session?.authenticated || !isInstitutionalEmail(email)) {
+    if (!session.authenticated || !isInstitutional(session.email)) {
       location.href = "/login/?next=" + encodeURIComponent("/prof/");
       return;
     }
   }
 
-  let itens = [];
-  try { itens = await fetchCSV(CSV_URLS.itens); } catch { itens = []; }
+  const itens = await fetchCSV(CSV_URLS.itens);
 
-  const visible = (itens || [])
-    .filter(x => truthy(x.ativo))
-    .filter(x => canShowByAccess(x.acesso))
-    .sort((a, b) => numOr(a.ordem) - numOr(b.ordem));
+  const visiveis = itens
+    .filter(i => truthy(i.ativo))
+    .filter(i => {
+      const a = safe(i.acesso).toLowerCase();
+      if (IS_PROF_PATH) return a === "prof";
+      return a === "publico" || a === "aluno";
+    })
+    .sort((a,b) => numOr(a.ordem) - numOr(b.ordem));
 
-  for (const item of visible) {
-    const title = safeText(item.titulo) || safeText(item.modulo) || "Módulo";
-    const desc  = safeText(item.descricao) || "";
-    const href  = safeText(item.url) || "#";
+  visiveis.forEach(i => {
+    list.appendChild(buildCard({
+      title: i.titulo,
+      desc: i.descricao,
+      href: i.url
+    }));
+  });
 
-    // Emoji: usa heurística pelos campos, mas você já está definindo na planilha (modulo/titulo com emoji)
-    const hint = `${safeText(item.tema)} ${safeText(item.tipo)} ${safeText(item.tags)} ${safeText(item.modulo)} ${safeText(item.titulo)}`.toLowerCase();
-    const emoji =
-      hint.includes("turma") ? "" :
-      hint.includes("monitor") ? "" :
-      hint.includes("calc") ? "" :
-      hint.includes("siga") ? "" :
-      hint.includes("reg") ? "" :
-      hint.includes("instal") ? "" :
-      hint.includes("cae") ? "" :
-      hint.includes("orbital") ? "" :
-      hint.includes("recuper") ? "" :
-      "";
-
-    list.appendChild(buildCard({ emoji, title, desc, href }));
-  }
-
-  const session = await getSession();
-  buildProfCard({ session });
-
-  // Popup de avisos (se existir modalRoot)
-  handleAvisos();
+  await renderProfCard();
+  await handleAvisos();
 }
 
-document.addEventListener("DOMContentLoaded", loadAndRender);
-
+document.addEventListener("DOMContentLoaded", load);
