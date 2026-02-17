@@ -1,6 +1,11 @@
 /* =========================
-   CONFIG – CSVs publicados
+   aluno.san – app.js (limpo, robusto)
+   - CSV com aspas/vírgulas OK
+   - ativo: TRUE/FALSE OK
+   - acesso: publico | aluno | prof
+   - sem heurística automática de emojis
 ========================= */
+
 const CSV_URLS = {
   itens: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSr4o5yxLQTP-MxL_gBjHC2LqsMbV8LdxlmOUG3VhGVUPMOy9m6n4pCMor4ghtHtDmLOYfkvGdIKCEA/pub?gid=1651715340&single=true&output=csv",
   avisos: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSr4o5yxLQTP-MxL_gBjHC2LqsMbV8LdxlmOUG3VhGVUPMOy9m6n4pCMor4ghtHtDmLOYfkvGdIKCEA/pub?gid=1684382034&single=true&output=csv"
@@ -8,41 +13,82 @@ const CSV_URLS = {
 
 const INSTITUTION_DOMAIN = "iffarroupilha.edu.br";
 
-/* =========================
-   Params
-========================= */
 const qs = new URLSearchParams(location.search);
 const FORCE_NET = qs.get("forceNet") === "1";
 const FORCE_AVISO = qs.get("forceAviso") === "1";
 const IS_PROF_PATH = location.pathname.startsWith("/prof");
 
-/* =========================
-   Utils
-========================= */
-const safe = v => (v ?? "").toString().trim();
-const truthy = v => safe(v).toLowerCase() === "true";
-const numOr = (v, f = 999999) => Number.isFinite(+v) ? +v : f;
+const safe = (v) => (v ?? "").toString().trim();
+const lower = (v) => safe(v).toLowerCase();
+
+function truthy(v) {
+  const s = lower(v);
+  return s === "true" || s === "1" || s === "sim" || s === "yes" || s === "ok" || s === "x";
+}
+
+function numOr(v, fallback = 999999) {
+  const n = Number(String(v).replace(",", "."));
+  return Number.isFinite(n) ? n : fallback;
+}
 
 /* =========================
-   CSV Parser
+   CSV parser robusto (aspas + vírgulas)
 ========================= */
-function parseCSV(text) {
-  const lines = text.split("\n").filter(l => l.trim());
-  const headers = lines[0].replace(/^\uFEFF/, "").split(",").map(h => h.trim().toLowerCase());
+function parseCsvLine(line) {
+  const out = [];
+  let cur = "";
+  let inQ = false;
 
-  return lines.slice(1).map(line => {
-    const cols = line.split(",");
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+
+    // "" -> "
+    if (ch === '"' && inQ && line[i + 1] === '"') {
+      cur += '"';
+      i++;
+      continue;
+    }
+    if (ch === '"') {
+      inQ = !inQ;
+      continue;
+    }
+    if (ch === "," && !inQ) {
+      out.push(cur);
+      cur = "";
+      continue;
+    }
+    cur += ch;
+  }
+  out.push(cur);
+  return out;
+}
+
+function parseCSV(csvText) {
+  const lines = csvText
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  if (!lines.length) return [];
+
+  // headers (remove BOM)
+  const headers = parseCsvLine(lines[0]).map((h) => safe(h).replace(/^\uFEFF/, "").toLowerCase());
+
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = parseCsvLine(lines[i]);
     const obj = {};
-    headers.forEach((h, i) => obj[h] = cols[i] ?? "");
-    return obj;
-  });
+    headers.forEach((h, idx) => (obj[h] = cols[idx] ?? ""));
+    rows.push(obj);
+  }
+  return rows;
 }
 
 async function fetchCSV(url) {
   const u = new URL(url);
-  if (FORCE_NET) u.searchParams.set("_ts", Date.now());
-
+  if (FORCE_NET) u.searchParams.set("_ts", Date.now().toString());
   const res = await fetch(u.toString(), { cache: FORCE_NET ? "no-store" : "default" });
+  if (!res.ok) throw new Error(`CSV falhou: ${res.status}`);
   return parseCSV(await res.text());
 }
 
@@ -60,62 +106,65 @@ async function getSession() {
 }
 
 function isInstitutional(email) {
-  return safe(email).endsWith("@" + INSTITUTION_DOMAIN);
+  return lower(email).endsWith("@" + INSTITUTION_DOMAIN);
 }
 
 /* =========================
-   Render Card
+   Render Card (sem emojis forçados)
 ========================= */
 function buildCard({ title, desc, href }) {
   const a = document.createElement("a");
   a.className = "card";
   a.href = href || "#";
 
+  // se for link relativo, abre no mesmo app; se for externo, nova aba
+  const isRelative = safe(href).startsWith("/");
+  a.target = isRelative ? "_self" : "_blank";
+  a.rel = "noopener noreferrer";
+
   const h = document.createElement("div");
   h.className = "card-title";
-  h.textContent = title;
-
-  const d = document.createElement("div");
-  d.className = "card-desc";
-  d.textContent = desc || "";
+  h.textContent = title || "(sem título)";
 
   a.appendChild(h);
-  if (desc) a.appendChild(d);
+
+  if (desc) {
+    const d = document.createElement("div");
+    d.className = "card-desc";
+    d.textContent = desc;
+    a.appendChild(d);
+  }
 
   return a;
 }
 
 /* =========================
-   Área Professor (Home)
+   Card Professor na Home (profCardSlot)
 ========================= */
-async function renderProfCard() {
+async function renderProfCardSlot() {
   const slot = document.getElementById("profCardSlot");
   if (!slot) return;
 
   slot.innerHTML = "";
 
   const session = await getSession();
-  const auth = session?.authenticated;
+  const auth = !!session?.authenticated;
   const email = safe(session?.email);
 
+  // Se logou com email não institucional, não mostra o botão professor
   if (auth && !isInstitutional(email)) return;
 
-  if (!auth) {
-    const card = buildCard({
-      title: "Área dos Professores",
-      desc: "Entrar com Google institucional.",
-      href: "/login/?next=" + encodeURIComponent("/prof/")
-    });
-    slot.appendChild(card);
-    return;
-  }
+  const next = encodeURIComponent("/prof/");
+  const href = auth ? "/prof/" : `/login/?next=${next}`;
 
   const card = buildCard({
-    title: "Painel do Professor",
-    desc: "Logado como: " + email,
-    href: "/prof/"
+    title: auth ? "🦉 Painel do Professor" : "🦉 Área dos Professores",
+    desc: auth ? `Logado como: ${email}` : "Entrar com Google institucional.",
+    href
   });
 
+  // deixa destacado se você tiver CSS para isso
+  card.classList.add("card-prof");
   slot.appendChild(card);
 }
 
@@ -134,42 +183,74 @@ function showModal({ title, text, onClose }) {
   const modal = document.createElement("div");
   modal.className = "modal";
 
-  modal.innerHTML = `
-    <h2>${title}</h2>
-    <p>${text}</p>
-    <div class="modal-actions">
-      <button class="btn btn-primary">Entendi</button>
-    </div>
-  `;
+  const h2 = document.createElement("h2");
+  h2.textContent = title || "Aviso";
 
-  modal.querySelector("button").onclick = () => {
+  const p = document.createElement("p");
+  p.textContent = text || "";
+
+  const actions = document.createElement("div");
+  actions.className = "modal-actions";
+
+  const btn = document.createElement("button");
+  btn.className = "btn btn-primary";
+  btn.textContent = "Entendi";
+
+  btn.onclick = () => {
     root.innerHTML = "";
     onClose && onClose();
   };
 
+  actions.appendChild(btn);
+  modal.appendChild(h2);
+  modal.appendChild(p);
+  modal.appendChild(actions);
   backdrop.appendChild(modal);
+
+  backdrop.addEventListener("click", (ev) => {
+    if (ev.target === backdrop) btn.click();
+  });
+
   root.appendChild(backdrop);
 }
 
 async function handleAvisos() {
-  const avisos = await fetchCSV(CSV_URLS.avisos);
-  const ativo = avisos.find(a => truthy(a.ativo));
-  if (!ativo) return;
+  try {
+    const avisos = await fetchCSV(CSV_URLS.avisos);
+    const ativo = avisos.find((a) => truthy(a.ativo));
+    if (!ativo) return;
 
-  const id = safe(ativo.aviso_id || ativo.titulo);
-  const key = "aviso_" + id;
+    const avisoId = safe(ativo.aviso_id || ativo.id || ativo.titulo || "aviso");
+    const key = `aviso_visto_${avisoId}`;
 
-  if (localStorage.getItem(key) && !FORCE_AVISO) return;
+    if (localStorage.getItem(key) === "1" && !FORCE_AVISO) return;
 
-  showModal({
-    title: ativo.titulo,
-    text: ativo.texto,
-    onClose: () => localStorage.setItem(key, "1")
-  });
+    showModal({
+      title: safe(ativo.titulo) || "Aviso",
+      text: safe(ativo.texto) || "",
+      onClose: () => localStorage.setItem(key, "1")
+    });
+  } catch {
+    // silencioso
+  }
 }
 
 /* =========================
-   Render Principal
+   Filtragem (publico | aluno | prof)
+========================= */
+function canShowByAccess(accessValue) {
+  const a = lower(accessValue);
+
+  if (IS_PROF_PATH) {
+    return a === "prof";
+  }
+
+  // Home
+  return a === "publico" || a === "aluno";
+}
+
+/* =========================
+   Carregar e renderizar
 ========================= */
 async function load() {
   const list = document.getElementById("modulesList");
@@ -177,34 +258,46 @@ async function load() {
 
   list.innerHTML = "";
 
+  // /prof exige login institucional
   if (IS_PROF_PATH) {
     const session = await getSession();
-    if (!session.authenticated || !isInstitutional(session.email)) {
+    if (!session?.authenticated || !isInstitutional(session?.email)) {
       location.href = "/login/?next=" + encodeURIComponent("/prof/");
       return;
     }
   }
 
-  const itens = await fetchCSV(CSV_URLS.itens);
+  let itens = [];
+  try {
+    itens = await fetchCSV(CSV_URLS.itens);
+  } catch {
+    list.textContent = "Erro ao carregar a planilha de links.";
+    return;
+  }
 
-  const visiveis = itens
-    .filter(i => truthy(i.ativo))
-    .filter(i => {
-      const a = safe(i.acesso).toLowerCase();
-      if (IS_PROF_PATH) return a === "prof";
-      return a === "publico" || a === "aluno";
-    })
-    .sort((a,b) => numOr(a.ordem) - numOr(b.ordem));
+  // Remove o card AREA-PROF da lista principal para evitar duplicar
+  // (ele aparece no profCardSlot)
+  const filtered = itens
+    .filter((i) => truthy(i.ativo))
+    .filter((i) => safe(i.id) !== "AREA-PROF")
+    .filter((i) => canShowByAccess(i.acesso))
+    .sort((a, b) => numOr(a.ordem) - numOr(b.ordem));
 
-  visiveis.forEach(i => {
-    list.appendChild(buildCard({
-      title: i.titulo,
-      desc: i.descricao,
-      href: i.url
-    }));
+  filtered.forEach((i) => {
+    list.appendChild(
+      buildCard({
+        title: safe(i.titulo),
+        desc: safe(i.descricao),
+        href: safe(i.url)
+      })
+    );
   });
 
-  await renderProfCard();
+  // Home: adiciona card destacado de professores no slot final
+  if (!IS_PROF_PATH) {
+    await renderProfCardSlot();
+  }
+
   await handleAvisos();
 }
 
