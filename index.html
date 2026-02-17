@@ -1,17 +1,41 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>aluno.san</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css">
+
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="/icon-192.png">
+  <meta name="theme-color" content="#2e7d32" />
+
+  <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <header>aluno.san</header>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">aluno.san</div>
+      <div class="subtitle">Acesso rápido aos módulos do Campus</div>
+    </div>
+  </header>
 
-  <main id="modules"></main>
+  <main class="container">
+    <section class="list" id="modulesList"></section>
 
-  <script src="app.js"></script>
+    <!-- Professores SEMPRE por último -->
+    <section class="list" id="profCardSlot"></section>
+  </main>
+
+  <div id="modalRoot"></div>
+
+  <script src="/app.js"></script>
+
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/service-worker.js").catch(() => {});
+      });
+    }
+  </script>
 </body>
 </html>
