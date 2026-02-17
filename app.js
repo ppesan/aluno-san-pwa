@@ -1,32 +1,29 @@
-// app.js
-// ATENÇÃO: ajuste aqui a URL do CSV "itens" (publicado como CSV)
-const ITENS_CSV_URL =
-  "https://docs.google.com/spreadsheets/d/e/2PACX-1vSr4o5yxLQTP-MxL_gBjHC2LqsMbV8LdxlmOUG3VhGVUPMOy9m6n4pCMor4ghtHtDmLOYfkvGdIKCEA/pub?gid=1651715340&single=true&output=csv";
+/* app.js (compatível com:
+   - Home: #modulesList e #profCardSlot
+   - Prof: #modulesList
+   Planilha com acesso: publico | aluno | prof
+*/
 
-function $(sel) {
-  return document.querySelector(sel);
-}
+const SHEET_CSV_URL =
+  "COLE_AQUI_A_URL_CSV_PUBLICADA_DA_SUA_PLANILHA"; 
+// Exemplo (formato):
+// https://docs.google.com/spreadsheets/d/e/....../pub?gid=XXXX&single=true&output=csv
 
-function cleanText(v) {
+function clean(v) {
   return (v ?? "").toString().trim();
 }
 
-function isProfPath() {
+function normalizeAccess(v) {
+  const a = clean(v).toLowerCase();
+  if (a === "publico" || a === "aluno" || a === "prof") return a;
+  return "publico";
+}
+
+function isProfArea() {
   return window.location.pathname.startsWith("/prof");
 }
 
-async function fetchSession() {
-  try {
-    const r = await fetch("/api/session", { credentials: "include" });
-    if (!r.ok) return { authenticated: false };
-    return await r.json();
-  } catch {
-    return { authenticated: false };
-  }
-}
-
 function parseCsvLine(line) {
-  // CSV simples com aspas
   const out = [];
   let cur = "";
   let inQ = false;
@@ -34,23 +31,21 @@ function parseCsvLine(line) {
   for (let i = 0; i < line.length; i++) {
     const ch = line[i];
 
+    // "" -> "
     if (ch === '"' && line[i + 1] === '"') {
       cur += '"';
       i++;
       continue;
     }
-
     if (ch === '"') {
       inQ = !inQ;
       continue;
     }
-
     if (ch === "," && !inQ) {
       out.push(cur);
       cur = "";
       continue;
     }
-
     cur += ch;
   }
   out.push(cur);
@@ -65,154 +60,149 @@ function csvToObjects(csvText) {
 
   if (!lines.length) return [];
 
-  const headers = parseCsvLine(lines[0]).map((h) => cleanText(h).toLowerCase());
+  const headers = parseCsvLine(lines[0]).map((h) => clean(h).toLowerCase());
   const rows = [];
 
   for (let i = 1; i < lines.length; i++) {
     const cols = parseCsvLine(lines[i]);
     const obj = {};
-    headers.forEach((h, idx) => {
-      obj[h] = cols[idx] ?? "";
-    });
+    headers.forEach((h, idx) => (obj[h] = cols[idx] ?? ""));
     rows.push(obj);
   }
   return rows;
 }
 
 function isActive(row) {
-  const v = cleanText(row.ativo).toUpperCase();
+  const v = clean(row.ativo).toUpperCase();
   return v === "TRUE" || v === "1" || v === "SIM";
 }
 
-function normalizeAccess(v) {
-  return cleanText(v).toLowerCase(); // publico | aluno | prof
-}
-
-function shouldShow(row, area) {
-  // area: "home" ou "prof"
-  const acesso = normalizeAccess(row.acesso);
-
-  if (area === "prof") return acesso === "prof";
-  // home
-  return acesso === "publico" || acesso === "aluno";
-}
-
-function sortByOrder(a, b) {
-  const oa = Number(cleanText(a.ordem) || 9999);
-  const ob = Number(cleanText(b.ordem) || 9999);
-  return oa - ob;
+function orderNum(row) {
+  const n = Number(clean(row.ordem) || 9999);
+  return Number.isFinite(n) ? n : 9999;
 }
 
 function buildCard(row) {
-  const titulo = cleanText(row.titulo);
-  const descricao = cleanText(row.descricao);
-  let url = cleanText(row.url);
+  const titulo = clean(row.titulo);
+  const desc = clean(row.descricao);
+  let url = clean(row.url);
 
-  // URLs relativas (ex.: /turma/)
-  if (url.startsWith("/")) {
-    // mantém
-  } else if (url && !/^https?:\/\//i.test(url)) {
-    // caso venha sem protocolo, evita quebrar
+  // Permite URL relativa tipo "/prof/"
+  const isRelative = url.startsWith("/");
+
+  // Se veio vazio, não quebra a página
+  if (!url) url = "#";
+
+  // Se não é relativa e não tem http/https, prefixa
+  if (!isRelative && url !== "#" && !/^https?:\/\//i.test(url)) {
     url = "https://" + url;
   }
 
   const a = document.createElement("a");
   a.className = "card";
-  a.href = url || "#";
-  a.target = url.startsWith("/") ? "_self" : "_blank";
+  a.href = url;
+  a.target = isRelative ? "_self" : "_blank";
   a.rel = "noopener noreferrer";
 
-  const h = document.createElement("div");
-  h.className = "card-title";
-  h.textContent = titulo || "(sem título)";
+  const t = document.createElement("div");
+  t.className = "card-title";
+  t.textContent = titulo || "(sem título)";
 
-  const p = document.createElement("div");
-  p.className = "card-desc";
-  p.textContent = descricao;
+  a.appendChild(t);
 
-  a.appendChild(h);
-  if (descricao) a.appendChild(p);
+  if (desc) {
+    const d = document.createElement("div");
+    d.className = "card-desc";
+    d.textContent = desc;
+    a.appendChild(d);
+  }
 
   return a;
 }
 
-function setHeader(area, session) {
-  const titleEl = $("#pageTitle");
-  const subtitleEl = $("#pageSubtitle");
-  const authEl = $("#authStatus");
-
-  if (area === "prof") {
-    if (titleEl) titleEl.textContent = "🦉 Área dos Professores";
-    if (subtitleEl) subtitleEl.textContent = "Acesso restrito (conta @iffarroupilha.edu.br).";
-  } else {
-    if (titleEl) titleEl.textContent = "aluno.san";
-    if (subtitleEl) subtitleEl.textContent = "";
-  }
-
-  if (authEl) {
-    authEl.textContent = session?.authenticated ? `Logado: ${session.email}` : "";
+async function fetchSession() {
+  try {
+    const r = await fetch("/api/session", { credentials: "include" });
+    if (!r.ok) return { authenticated: false };
+    return await r.json();
+  } catch {
+    return { authenticated: false };
   }
 }
 
+async function loadSheetItems() {
+  const res = await fetch(SHEET_CSV_URL, { cache: "no-store" });
+  const csv = await res.text();
+  return csvToObjects(csv)
+    .filter(isActive)
+    .map((r) => ({
+      id: clean(r.id),
+      titulo: clean(r.titulo),
+      descricao: clean(r.descricao),
+      url: clean(r.url),
+      acesso: normalizeAccess(r.acesso),
+      ordem: orderNum(r),
+    }));
+}
+
+function renderList(container, items) {
+  if (!container) return;
+  container.innerHTML = "";
+  items.forEach((row) => container.appendChild(buildCard(row)));
+}
+
 async function main() {
-  const area = isProfPath() ? "prof" : "home";
+  const listEl = document.getElementById("modulesList");
+  const profSlot = document.getElementById("profCardSlot");
+  const profArea = isProfArea();
 
-  // Se estiver em /prof, exige login (cookie de sessão)
-  const session = await fetchSession();
-  setHeader(area, session);
-
-  if (area === "prof" && !session.authenticated) {
-    // manda para /login/ (página de login)
-    window.location.href = "/login/";
-    return;
+  // 1) Se for /prof/, exige login
+  if (profArea) {
+    const session = await fetchSession();
+    if (!session.authenticated) {
+      window.location.href = "/login/";
+      return;
+    }
   }
 
-  // carrega itens da planilha
+  // 2) Carrega itens da planilha
   let items = [];
   try {
-    const res = await fetch(ITENS_CSV_URL, { cache: "no-store" });
-    const csv = await res.text();
-    items = csvToObjects(csv).filter(isActive);
+    items = await loadSheetItems();
   } catch (e) {
-    const list = $("#cards");
-    if (list) list.textContent = "Erro ao carregar a planilha de itens.";
+    if (listEl) listEl.textContent = "Erro ao carregar a planilha de links.";
     return;
   }
 
-  const filtered = items.filter((row) => shouldShow(row, area)).sort(sortByOrder);
+  // 3) Separa “Área dos Professores” (id AREA-PROF) para renderizar só na Home e por último
+  const areaProfCard = items.find((x) => x.id === "AREA-PROF");
+  const rest = items.filter((x) => x.id !== "AREA-PROF");
 
-  const list = $("#cards");
-  if (!list) return;
+  // 4) Filtra conforme a área
+  if (profArea) {
+    // PROF: só acesso=prof (ex.: Agenda Semanal)
+    const profItems = rest
+      .filter((x) => x.acesso === "prof")
+      .sort((a, b) => a.ordem - b.ordem);
 
-  list.innerHTML = "";
-  filtered.forEach((row) => list.appendChild(buildCard(row)));
+    renderList(listEl, profItems);
 
-  // botão de navegação extra
-  const nav = $("#extraNav");
-  if (nav) {
-    nav.innerHTML = "";
+    // profSlot não existe em /prof/ (e tudo bem)
+    return;
+  }
 
-    if (area === "home") {
-      const btn = document.createElement("a");
-      btn.className = "btn";
-      btn.href = "/prof/";
-      btn.textContent = "🦉 Área dos Professores";
-      nav.appendChild(btn);
-    } else {
-      const btnHome = document.createElement("a");
-      btnHome.className = "btn";
-      btnHome.href = "/";
-      btnHome.textContent = "⬅ Voltar para a Home";
-      nav.appendChild(btnHome);
+  // HOME: publico + aluno
+  const homeItems = rest
+    .filter((x) => x.acesso === "publico" || x.acesso === "aluno")
+    .sort((a, b) => a.ordem - b.ordem);
 
-      const btnLogout = document.createElement("button");
-      btnLogout.className = "btn";
-      btnLogout.textContent = "Sair";
-      btnLogout.onclick = async () => {
-        await fetch("/api/logout", { method: "POST", credentials: "include" });
-        window.location.href = "/";
-      };
-      nav.appendChild(btnLogout);
+  renderList(listEl, homeItems);
+
+  // 5) Professores SEMPRE por último na Home (se existir na planilha)
+  if (profSlot) {
+    profSlot.innerHTML = "";
+    if (areaProfCard) {
+      profSlot.appendChild(buildCard(areaProfCard));
     }
   }
 }
