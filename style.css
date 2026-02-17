@@ -206,3 +206,43 @@ a:hover, a:focus{
 @media (max-width: 520px){
   .list{ grid-template-columns: 1fr; }
 }
+/* ===== Modal / Avisos (Popup) ===== */
+.modal-backdrop{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 9999;
+}
+
+.modal{
+  width: min(520px, 100%);
+  background: #fff;
+  border-radius: 16px;
+  padding: 16px 16px 14px;
+  box-shadow: 0 18px 60px rgba(0,0,0,.22);
+}
+
+.modal h2{
+  margin: 0 0 10px 0;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.modal p{
+  margin: 0;
+  color: rgba(24,22,23,.75);
+  line-height: 1.35rem;
+  white-space: pre-wrap;
+}
+
+.modal-actions{
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+  gap: 10px;
+}
+
