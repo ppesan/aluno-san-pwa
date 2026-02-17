@@ -308,16 +308,16 @@ async function loadAndRender() {
     // Emoji: usa heurística pelos campos, mas você já está definindo na planilha (modulo/titulo com emoji)
     const hint = `${safeText(item.tema)} ${safeText(item.tipo)} ${safeText(item.tags)} ${safeText(item.modulo)} ${safeText(item.titulo)}`.toLowerCase();
     const emoji =
-      hint.includes("turma") ? "🧑‍🤝‍🧑" :
-      hint.includes("monitor") ? "🎓" :
-      hint.includes("calc") ? "🧮" :
-      hint.includes("siga") ? "⏰" :
-      hint.includes("reg") ? "📜" :
-      hint.includes("instal") ? "📱" :
-      hint.includes("cae") ? "❤️" :
-      hint.includes("orbital") ? "🌐" :
-      hint.includes("recuper") ? "👥" :
-      "➡️";
+      hint.includes("turma") ? "" :
+      hint.includes("monitor") ? "" :
+      hint.includes("calc") ? "" :
+      hint.includes("siga") ? "" :
+      hint.includes("reg") ? "" :
+      hint.includes("instal") ? "" :
+      hint.includes("cae") ? "" :
+      hint.includes("orbital") ? "" :
+      hint.includes("recuper") ? "" :
+      "";
 
     list.appendChild(buildCard({ emoji, title, desc, href }));
   }
@@ -330,3 +330,4 @@ async function loadAndRender() {
 }
 
 document.addEventListener("DOMContentLoaded", loadAndRender);
+
