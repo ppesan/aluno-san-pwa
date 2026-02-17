@@ -1,115 +1,121 @@
-const COOKIE_NAME = "aluno_san_session";
-const ALLOWED_DOMAIN = "iffarroupilha.edu.br";
-
-export async function onRequestGet(context) {
-  const cookie = context.request.headers.get("cookie") || "";
-  const token = parseCookie(cookie)[COOKIE_NAME];
-
-  if (!token) return json({ authenticated: false });
-
-  // Valida o token de novo com o Google (mais confiável do que tentar atob)
-  const info = await tokenInfo(token);
-  if (!info.ok) {
-    // token inválido/expirado -> força “deslogado”
-    return json({ authenticated: false });
-  }
-
-  const email = (info.data.email || "").toLowerCase();
-  const hd = (info.data.hd || "").toLowerCase();
-  const emailDomain = (email.split("@")[1] || "").toLowerCase();
-
-  const okDomain = (hd === ALLOWED_DOMAIN) || (emailDomain === ALLOWED_DOMAIN);
-  if (!okDomain) return json({ authenticated: false });
-
-  return json({ authenticated: true, email, hd: hd || null });
-}
-
-export async function onRequestPost(context) {
-  const { request } = context;
-
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return json({ error: "JSON inválido." }, 400);
-  }
-
-  const credential = body?.credential;
-  if (!credential) return json({ error: "Credencial ausente." }, 400);
-
-  const info = await tokenInfo(credential);
-  if (!info.ok) return json({ error: "Token inválido." }, 401);
-
-  const email = (info.data.email || "").toLowerCase();
-  const hd = (info.data.hd || "").toLowerCase();
-  const emailDomain = (email.split("@")[1] || "").toLowerCase();
-
-  const okDomain = (hd === ALLOWED_DOMAIN) || (emailDomain === ALLOWED_DOMAIN);
-  if (!okDomain) {
-    return json({ error: "Acesso permitido apenas para contas @iffarroupilha.edu.br." }, 403);
-  }
-
-  const headers = new Headers();
-  headers.append(
-    "set-cookie",
-    buildCookie(COOKIE_NAME, credential, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "Lax",
-      path: "/",
-      maxAge: 60 * 60 * 8, // 8h
-    })
-  );
-
-  return json({ ok: true, email, hd }, 200, headers);
-}
-
-// fallback: se bater em método não previsto
-export async function onRequest() {
-  return json({ error: "Método não permitido." }, 405);
-}
-
-/* =========================
-   Helpers
-========================= */
-
-async function tokenInfo(idToken) {
-  try {
-    const res = await fetch(
-      "https://oauth2.googleapis.com/tokeninfo?id_token=" + encodeURIComponent(idToken),
-      { cache: "no-store" }
-    );
-
-    if (!res.ok) return { ok: false, status: res.status, data: null };
-    const data = await res.json();
-    return { ok: true, status: 200, data };
-  } catch {
-    return { ok: false, status: 0, data: null };
-  }
-}
-
-function json(obj, status = 200, headers = new Headers()) {
-  headers.set("content-type", "application/json; charset=utf-8");
-  return new Response(JSON.stringify(obj), { status, headers });
-}
-
-function parseCookie(cookieHeader) {
+// functions/api/session.js
+function parseCookies(cookieHeader) {
   const out = {};
+  if (!cookieHeader) return out;
   cookieHeader.split(";").forEach((part) => {
     const [k, ...v] = part.trim().split("=");
-    if (!k) return;
     out[k] = decodeURIComponent(v.join("=") || "");
   });
   return out;
 }
 
-function buildCookie(name, value, opt) {
-  const parts = [];
-  parts.push(`${name}=${encodeURIComponent(value)}`);
-  if (opt.maxAge != null) parts.push(`Max-Age=${opt.maxAge}`);
-  if (opt.path) parts.push(`Path=${opt.path}`);
-  if (opt.httpOnly) parts.push("HttpOnly");
-  if (opt.secure) parts.push("Secure");
-  if (opt.sameSite) parts.push(`SameSite=${opt.sameSite}`);
-  return parts.join("; ");
+function decodeJwtPayload(jwt) {
+  // jwt = header.payload.signature
+  const parts = (jwt || "").split(".");
+  if (parts.length < 2) return null;
+
+  const b64 = parts[1]
+    .replace(/-/g, "+")
+    .replace(/_/g, "/")
+    .padEnd(Math.ceil(parts[1].length / 4) * 4, "=");
+
+  try {
+    const json = atob(b64);
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
+function isAllowedEmail(email) {
+  return typeof email === "string" && email.toLowerCase().endsWith("@iffarroupilha.edu.br");
+}
+
+// POST: recebe o "credential" do Google, salva em cookie HttpOnly
+export async function onRequestPost({ request }) {
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return new Response(JSON.stringify({ ok: false, error: "invalid_json" }), {
+      status: 400,
+      headers: { "content-type": "application/json; charset=utf-8" },
+    });
+  }
+
+  const credential = body?.credential;
+  if (!credential || typeof credential !== "string") {
+    return new Response(JSON.stringify({ ok: false, error: "missing_credential" }), {
+      status: 400,
+      headers: { "content-type": "application/json; charset=utf-8" },
+    });
+  }
+
+  // (mínimo) valida payload do JWT
+  const payload = decodeJwtPayload(credential);
+  if (!payload || !isAllowedEmail(payload.email)) {
+    return new Response(JSON.stringify({ ok: false, error: "email_not_allowed" }), {
+      status: 403,
+      headers: { "content-type": "application/json; charset=utf-8" },
+    });
+  }
+
+  const headers = new Headers();
+  headers.set("content-type", "application/json; charset=utf-8");
+
+  // Cookie de sessão
+  // SameSite=Lax funciona bem para este fluxo.
+  headers.append(
+    "set-cookie",
+    `aluno_san_session=${encodeURIComponent(credential)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${60 * 60 * 24 * 7}`
+  );
+
+  return new Response(JSON.stringify({ ok: true }), { status: 200, headers });
+}
+
+// GET: confirma se existe cookie válido e devolve authenticated true/false
+export async function onRequestGet({ request }) {
+  const cookies = parseCookies(request.headers.get("cookie"));
+  const token = cookies.aluno_san_session;
+
+  if (!token) {
+    return new Response(JSON.stringify({ authenticated: false }), {
+      status: 200,
+      headers: { "content-type": "application/json; charset=utf-8" },
+    });
+  }
+
+  const payload = decodeJwtPayload(token);
+
+  // checagens mínimas: exp e email institucional
+  const now = Math.floor(Date.now() / 1000);
+  const expOk = payload?.exp ? payload.exp > now : false;
+  const emailOk = payload?.email ? isAllowedEmail(payload.email) : false;
+
+  if (!payload || !expOk || !emailOk) {
+    return new Response(JSON.stringify({ authenticated: false }), {
+      status: 200,
+      headers: { "content-type": "application/json; charset=utf-8" },
+    });
+  }
+
+  return new Response(
+    JSON.stringify({
+      authenticated: true,
+      email: payload.email,
+      name: payload.name || null,
+    }),
+    {
+      status: 200,
+      headers: { "content-type": "application/json; charset=utf-8" },
+    }
+  );
+}
+
+// fallback (outros métodos)
+export async function onRequest({ request }) {
+  return new Response(JSON.stringify({ ok: false, error: "method_not_allowed" }), {
+    status: 405,
+    headers: { "content-type": "application/json; charset=utf-8" },
+  });
 }
