@@ -1,6 +1,6 @@
 /* aluno.san - service-worker.js */
 
-const CACHE_VERSION = "aluno-san-wpa-v1.3"; // ↑ aumente sempre que alterar
+const CACHE_VERSION = "aluno-san-wpa-v1.4"; // ↑ aumente sempre que alterar
 const CACHE_NAME = CACHE_VERSION;
 const CSV_CACHE_NAME = `${CACHE_VERSION}-csv`;
 
@@ -165,5 +165,6 @@ async function staleWhileRevalidate(req, cacheName) {
 
   return cached || fetchPromise;
 }
+
 
 
