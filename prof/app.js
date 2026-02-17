@@ -255,11 +255,16 @@ async function handleAvisos() {
 ========================= */
 function canShowByAccess(accessValue) {
   const a = safeText(accessValue).toLowerCase();
+
   if (IS_PROF_PATH) {
-    return a === "prof" || a === "ambos" || a === "publico" || a === "institucional";
+    // Dentro do /prof mostra apenas itens exclusivos de professor
+    return a === "prof" || a === "institucional";
   }
-  return a === "aluno" || a === "ambos" || a === "publico";
+
+  // Na Home mostra apenas itens de aluno e públicos
+  return a === "aluno" || a === "publico" || a === "ambos";
 }
+
 
 function getModulesContainer() {
   return document.getElementById("modulesList") || document.getElementById("modules");
