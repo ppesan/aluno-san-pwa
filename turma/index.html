@@ -6,35 +6,73 @@
   <title>Sua Turma • aluno.san</title>
 
   <link rel="stylesheet" href="/style.css" />
+
   <style>
     .page{ max-width:860px; margin:0 auto; padding:16px; }
     .cardbox{
-      background:#fff; border-radius:12px; padding:16px;
+      background:#fff;
+      border-radius:12px;
+      padding:16px;
       box-shadow:0 2px 10px rgba(0,0,0,.08);
       margin-bottom:14px;
     }
     .row{ display:flex; gap:10px; flex-wrap:wrap; }
     .btn{
-      display:inline-block; padding:12px 14px; border-radius:10px;
-      text-decoration:none; font-weight:800; border:1px solid rgba(0,0,0,.12);
-      background:#fff; color:#181617;
+      display:inline-block;
+      padding:12px 14px;
+      border-radius:10px;
+      text-decoration:none;
+      font-weight:800;
+      border:1px solid rgba(0,0,0,.12);
+      background:#fff;
+      color:#181617;
+      cursor:pointer;
     }
     .btn.primary{ background:#43933C; color:#fff; border-color:transparent; }
     .btn.small{ padding:10px 12px; font-weight:800; }
     .muted{ color:rgba(24,22,23,.75); font-size:14px; }
+
     select{
-      width:100%; padding:12px 12px; border-radius:10px;
-      border:1px solid rgba(0,0,0,.18); font-size:16px;
+      width:100%;
+      padding:12px 12px;
+      border-radius:10px;
+      border:1px solid rgba(0,0,0,.18);
+      font-size:16px;
       background:#fff;
     }
+
     ul.links{ padding-left:18px; margin:10px 0 0 0; }
     ul.links li{ margin:8px 0; }
-    .notice{
+
+    .infoBox, .notice{
+      padding:12px;
+      border-radius:12px;
+      margin-bottom:12px;
+    }
+
+    .infoBox{
       background:rgba(67,147,60,.08);
       border:1px solid rgba(67,147,60,.22);
-      padding:12px; border-radius:12px;
     }
-    .notice strong{ display:block; margin-bottom:6px; }
+
+    .notice{
+      background:rgba(24,22,23,.04);
+      border:1px solid rgba(24,22,23,.12);
+    }
+
+    .infoBox strong,
+    .notice strong{
+      display:block;
+      margin-bottom:6px;
+    }
+
+    .infoText,
+    .noticeText{
+      white-space:pre-line;
+      line-height:1.45;
+      font-size:14px;
+    }
+
     .hint{
       background:rgba(24,22,23,.04);
       border:1px solid rgba(24,22,23,.10);
@@ -53,7 +91,6 @@
 
   <main class="page">
 
-    <!-- TELA 1: escolher turma -->
     <section class="cardbox" id="chooseBox">
       <h2 style="margin:0 0 6px 0;">Escolha sua turma</h2>
       <p class="muted" style="margin:0 0 12px 0;">
@@ -104,16 +141,20 @@
       </div>
     </section>
 
-    <!-- TELA 2: conteúdo da turma -->
     <section class="cardbox" id="turmaBox" style="display:none;">
       <h2 style="margin:0 0 6px 0;">Minha turma: <span id="turmaName"></span></h2>
       <p class="muted" style="margin:0 0 12px 0;">
-        Aqui você encontra links e avisos da sua turma.
+        Aqui você encontra informações, links e avisos da sua turma.
       </p>
+
+      <div class="infoBox" id="infoBox" style="display:none;">
+        <strong>👥 Informações da turma</strong>
+        <div id="infoText" class="infoText"></div>
+      </div>
 
       <div class="notice" id="noticeBox" style="display:none;">
         <strong>📌 Avisos</strong>
-        <div id="noticeText"></div>
+        <div id="noticeText" class="noticeText"></div>
       </div>
 
       <h3 style="margin:14px 0 6px 0;">🔗 Links úteis</h3>
@@ -130,7 +171,6 @@
   <script>
     const KEY = "alunoSan_turma";
 
-    // ✅ SEU CSV publicado (aba turmas)
     const TURMAS_CSV_URL =
       "https://docs.google.com/spreadsheets/d/e/2PACX-1vSr4o5yxLQTP-MxL_gBjHC2LqsMbV8LdxlmOUG3VhGVUPMOy9m6n4pCMor4ghtHtDmLOYfkvGdIKCEA/pub?gid=2008054509&single=true&output=csv";
 
@@ -138,13 +178,30 @@
     const turmaBox = document.getElementById("turmaBox");
     const turmaSelect = document.getElementById("turmaSelect");
     const turmaName = document.getElementById("turmaName");
+
+    const infoBox = document.getElementById("infoBox");
+    const infoText = document.getElementById("infoText");
+
     const noticeBox = document.getElementById("noticeBox");
     const noticeText = document.getElementById("noticeText");
+
     const linksList = document.getElementById("linksList");
 
-    // Estrutura carregada do CSV:
-    // TURMAS = { INF11: { avisos:[], links:[{titulo,url}] }, ... }
     let TURMAS = {};
+
+    function truthy(v) {
+      const s = (v || "").toString().trim().toUpperCase();
+      return s === "TRUE" || s === "VERDADEIRO" || s === "1" || s === "SIM";
+    }
+
+    function escapeHTML(str) {
+      return String(str || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
 
     function showChoose() {
       chooseBox.style.display = "block";
@@ -157,34 +214,29 @@
       renderTurma(turma);
     }
 
-    function escapeHTML(str) {
-      return String(str)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-    }
-
     function renderTurma(turma) {
-      const data = TURMAS[turma] || { avisos: [], links: [] };
+      const data = TURMAS[turma] || { info: [], avisos: [], links: [] };
 
       turmaName.textContent = turma;
 
-      // Avisos
+      if (data.info.length) {
+        infoBox.style.display = "block";
+        infoText.innerHTML = data.info.map(escapeHTML).join("\n\n");
+      } else {
+        infoBox.style.display = "none";
+        infoText.innerHTML = "";
+      }
+
       if (data.avisos.length) {
         noticeBox.style.display = "block";
-        noticeText.innerHTML =
-          "<ul style='margin:0;padding-left:18px;'>" +
-          data.avisos.map(a => `<li>${escapeHTML(a)}</li>`).join("") +
-          "</ul>";
+        noticeText.innerHTML = data.avisos.map(escapeHTML).join("\n\n");
       } else {
         noticeBox.style.display = "none";
         noticeText.innerHTML = "";
       }
 
-      // Links
       linksList.innerHTML = "";
+
       if (data.links.length) {
         data.links.forEach(l => {
           const li = document.createElement("li");
@@ -192,7 +244,7 @@
           a.href = l.url;
           a.target = "_blank";
           a.rel = "noopener";
-          a.textContent = l.titulo;
+          a.textContent = l.titulo || "Link";
           li.appendChild(a);
           linksList.appendChild(li);
         });
@@ -203,7 +255,6 @@
       }
     }
 
-    // CSV parser robusto (suporta vírgulas e aspas)
     function parseCSV(text) {
       const rows = [];
       let row = [];
@@ -235,14 +286,13 @@
             row = [];
             field = "";
           } else if (c === "\r") {
-            // ignore
+            // ignora
           } else {
             field += c;
           }
         }
       }
 
-      // última linha
       if (field.length || row.length) {
         row.push(field);
         rows.push(row);
@@ -250,7 +300,7 @@
 
       if (!rows.length) return [];
 
-      const headers = rows[0].map(h => (h || "").trim().toLowerCase());
+      const headers = rows[0].map(h => (h || "").trim().replace(/^\uFEFF/, "").toLowerCase());
       const out = [];
 
       for (let r = 1; r < rows.length; r++) {
@@ -266,7 +316,7 @@
     }
 
     async function loadTurmasFromCSV() {
-      const url = TURMAS_CSV_URL + "&cb=" + Date.now(); // evita cache agressivo
+      const url = TURMAS_CSV_URL + "&cb=" + Date.now();
       const res = await fetch(url, { cache: "no-store" });
       if (!res.ok) throw new Error("Falha ao carregar CSV das turmas.");
 
@@ -274,28 +324,49 @@
       const rows = parseCSV(csvText);
 
       const map = {};
+
       rows
-        .filter(r => (r.ativo || "").toUpperCase() === "TRUE")
+        .filter(r => truthy(r.ativo))
         .sort((a, b) => Number(a.ordem || 9999) - Number(b.ordem || 9999))
         .forEach(r => {
           const turma = (r.turma || "").trim();
           const tipo = (r.tipo || "").trim().toLowerCase();
+          const titulo = (r.titulo || "").trim();
+          const texto = (r.texto || "").trim();
+          const url = (r.url || "").trim();
 
           if (!turma) return;
-          if (!map[turma]) map[turma] = { avisos: [], links: [] };
 
-          if (tipo === "aviso") {
-            const txt = (r.texto || "").trim();
-            if (txt) map[turma].avisos.push(txt);
+          if (!map[turma]) {
+            map[turma] = { info: [], avisos: [], links: [] };
           }
 
           if (tipo === "link") {
-            const url = (r.url || "").trim();
-            if (!url) return;
-            map[turma].links.push({
-              titulo: (r.titulo || "Link").trim(),
-              url
-            });
+            if (url) {
+              map[turma].links.push({
+                titulo: titulo || "Link",
+                url
+              });
+            }
+          }
+
+          if (
+            tipo === "info" ||
+            tipo === "informacao" ||
+            tipo === "informação" ||
+            tipo === "dados"
+          ) {
+            if (texto) {
+              map[turma].info.push(texto);
+            }
+          }
+
+          if (tipo === "aviso") {
+            if (texto) {
+              map[turma].avisos.push(texto);
+            } else if (titulo) {
+              map[turma].avisos.push(titulo);
+            }
           }
         });
 
@@ -304,16 +375,22 @@
 
     document.getElementById("saveBtn").addEventListener("click", async () => {
       const turma = turmaSelect.value.trim();
+
       if (!turma) {
         alert("Selecione sua turma.");
         return;
       }
+
       localStorage.setItem(KEY, turma);
 
-      // garante que dados já carregaram
       if (!Object.keys(TURMAS).length) {
-        try { await loadTurmasFromCSV(); } catch (e) {}
+        try {
+          await loadTurmasFromCSV();
+        } catch (e) {
+          console.warn("Erro ao carregar turmas:", e);
+        }
       }
+
       showTurma(turma);
     });
 
@@ -332,6 +409,7 @@
       }
 
       const saved = localStorage.getItem(KEY);
+
       if (saved) {
         turmaSelect.value = saved;
         showTurma(saved);
