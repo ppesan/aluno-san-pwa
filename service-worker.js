@@ -1,171 +1,145 @@
-/* aluno.san - service-worker.js */
+const CACHE_PREFIX = "aluno-san";
+const CACHE_VERSION = "v20260504-1";
 
-const CACHE_VERSION = "aluno-san-wpa-v1.5"; // ↑ aumente sempre que alterar
-const CACHE_NAME = CACHE_VERSION;
-const CSV_CACHE_NAME = `${CACHE_VERSION}-csv`;
+const STATIC_CACHE = `${CACHE_PREFIX}-${CACHE_VERSION}-static`;
+const RUNTIME_CACHE = `${CACHE_PREFIX}-${CACHE_VERSION}-runtime`;
 
-const PRECACHE_URLS = [
+const CORE_ASSETS = [
   "/",
   "/index.html",
-  "/prof/",
-  "/prof/index.html",
-  "/login/",
-  "/login/index.html",
-  "/app.js",
   "/style.css",
+  "/app.js",
   "/manifest.json",
   "/icon-192.png",
   "/icon-512.png",
+  "/instalar/",
+  "/calculadora/",
+  "/monitoria/",
+  "/turma/",
+  "/prof/"
 ];
 
-// --- Helpers ---
-function hasForceNet(req) {
+self.addEventListener("install", (event) => {
+  event.waitUntil((async () => {
+    const cache = await caches.open(STATIC_CACHE);
+    await Promise.allSettled(CORE_ASSETS.map((url) => cache.add(url)));
+    self.skipWaiting();
+  })());
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(
+      keys
+        .filter((k) => k.startsWith(CACHE_PREFIX + "-") && k !== STATIC_CACHE && k !== RUNTIME_CACHE)
+        .map((k) => caches.delete(k))
+    );
+
+    await self.clients.claim();
+
+    const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    clients.forEach((client) =>
+      client.postMessage({ type: "SW_ACTIVATED", version: CACHE_VERSION })
+    );
+  })());
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") self.skipWaiting();
+});
+
+function isSameOrigin(request) {
   try {
-    const url = new URL(req.url);
-    return url.searchParams.get("forceNet") === "1";
+    return new URL(request.url).origin === self.location.origin;
   } catch {
     return false;
   }
 }
 
-function isGoogleSheetsCSV(url) {
+function isNavigation(request) {
+  return request.mode === "navigate";
+}
+
+function isStaticAsset(request) {
+  const url = new URL(request.url);
   return (
-    url.hostname.includes("docs.google.com") &&
-    url.pathname.includes("/spreadsheets/") &&
-    url.searchParams.get("output") === "csv"
+    request.method === "GET" &&
+    isSameOrigin(request) &&
+    (
+      url.pathname.endsWith(".js") ||
+      url.pathname.endsWith(".css") ||
+      url.pathname.endsWith(".png") ||
+      url.pathname.endsWith(".jpg") ||
+      url.pathname.endsWith(".jpeg") ||
+      url.pathname.endsWith(".svg") ||
+      url.pathname.endsWith(".webp") ||
+      url.pathname.endsWith(".ico") ||
+      url.pathname.endsWith(".json")
+    )
   );
 }
 
-// --- Install ---
-self.addEventListener("install", (event) => {
-  event.waitUntil((async () => {
-    const cache = await caches.open(CACHE_NAME);
-
-    // Precache resiliente: se algum arquivo falhar, não derruba a instalação inteira
-    await Promise.all(
-      PRECACHE_URLS.map(async (u) => {
-        try {
-          await cache.add(new Request(u, { cache: "reload" }));
-        } catch (e) {
-          // não quebra o install se algum asset não existir
-          // (ex.: rota /login/ pode depender de deploy)
-          console.warn("[SW] Precache falhou:", u, e);
-        }
-      })
-    );
-
-    await self.skipWaiting();
-  })());
-});
-
-// --- Activate ---
-self.addEventListener("activate", (event) => {
-  event.waitUntil((async () => {
-    const keys = await caches.keys();
-    await Promise.all(
-      keys.map((k) => {
-        // mantém apenas os caches da versão atual
-        if (k === CACHE_NAME) return Promise.resolve();
-        if (k === CSV_CACHE_NAME) return Promise.resolve();
-
-        // apaga todo o resto (versões antigas)
-        if (k.startsWith("aluno-san-wpa-") || k.startsWith("aluno-san-sw-")) {
-          return caches.delete(k);
-        }
-        return caches.delete(k);
-      })
-    );
-
-    await self.clients.claim();
-  })());
-});
-
-// --- Fetch ---
-self.addEventListener("fetch", (event) => {
-  const req = event.request;
-  if (req.method !== "GET") return;
-
-  const url = new URL(req.url);
-
-  // 1) BYPASS TOTAL PARA API (crítico para login e Functions)
-  if (url.origin === self.location.origin && url.pathname.startsWith("/api/")) {
-    event.respondWith(fetch(req, { cache: "no-store" }));
-    return;
-  }
-
-  // 2) Bypass manual via ?forceNet=1
-  if (hasForceNet(req)) {
-    event.respondWith(fetch(req, { cache: "no-store" }));
-    return;
-  }
-
-  // 3) CSV do Google Sheets: stale-while-revalidate
-  if (isGoogleSheetsCSV(url)) {
-    event.respondWith(staleWhileRevalidate(req, CSV_CACHE_NAME));
-    return;
-  }
-
-  // 4) Navegação HTML (páginas): network-first (melhor para atualizar versão)
-  if (req.mode === "navigate") {
-    event.respondWith(networkFirst(req, CACHE_NAME));
-    return;
-  }
-
-  // 5) Assets do mesmo domínio: cache-first
-  if (url.origin === self.location.origin) {
-    event.respondWith(cacheFirst(req, CACHE_NAME));
-    return;
-  }
-
-  // 6) Outros (CDNs etc.)
-  event.respondWith(fetch(req));
-});
-
-/* =========================
-   Estratégias
-========================= */
-
-async function cacheFirst(req, cacheName) {
-  const cached = await caches.match(req);
-  if (cached) return cached;
-
-  const fresh = await fetch(req);
-  if (fresh && fresh.ok) {
-    const cache = await caches.open(cacheName);
-    cache.put(req, fresh.clone());
-  }
-  return fresh;
-}
-
-async function networkFirst(req, cacheName) {
+async function networkFirst(request) {
+  const cache = await caches.open(RUNTIME_CACHE);
   try {
-    const fresh = await fetch(req);
-    if (fresh && fresh.ok) {
-      const cache = await caches.open(cacheName);
-      cache.put(req, fresh.clone());
+    const fresh = await fetch(request, { cache: "no-store" });
+    if (isSameOrigin(request) && fresh && fresh.ok) {
+      cache.put(request, fresh.clone());
     }
     return fresh;
   } catch {
-    const cached = await caches.match(req);
-    // fallback sensato
-    return cached || caches.match("/index.html");
+    const cached = await cache.match(request);
+    if (cached) return cached;
+
+    const staticCache = await caches.open(STATIC_CACHE);
+    const fallback = await staticCache.match("/index.html");
+    return fallback || Response.error();
   }
 }
 
-async function staleWhileRevalidate(req, cacheName) {
-  const cache = await caches.open(cacheName);
-  const cached = await cache.match(req);
+async function staleWhileRevalidate(request) {
+  const cache = await caches.open(RUNTIME_CACHE);
+  const cached = await cache.match(request);
 
-  const fetchPromise = fetch(req, { cache: "no-store" })
+  const networkPromise = fetch(request)
     .then((fresh) => {
-      if (fresh && fresh.ok) cache.put(req, fresh.clone());
+      if (fresh && fresh.ok) cache.put(request, fresh.clone());
       return fresh;
     })
     .catch(() => null);
 
-  return cached || fetchPromise;
+  return cached || (await networkPromise) || Response.error();
 }
 
+self.addEventListener("fetch", (event) => {
+  const { request } = event;
+  if (request.method !== "GET") return;
 
+  const url = new URL(request.url);
 
+  if (
+    url.hostname.endsWith("google.com") ||
+    url.hostname.endsWith("googleusercontent.com")
+  ) {
+    event.respondWith(fetch(request, { cache: "no-store" }));
+    return;
+  }
 
+  if (isNavigation(request)) {
+    event.respondWith(networkFirst(request));
+    return;
+  }
+
+  if (isStaticAsset(request)) {
+    event.respondWith(staleWhileRevalidate(request));
+    return;
+  }
+
+  if (!isSameOrigin(request)) {
+    event.respondWith(fetch(request, { cache: "no-store" }));
+    return;
+  }
+
+  event.respondWith(networkFirst(request));
+});
