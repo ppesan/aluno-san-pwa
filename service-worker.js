@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "aluno-san";
-const CACHE_VERSION = "v20260531-1";
+const CACHE_VERSION = "v20260531-2";
 
 const STATIC_CACHE = `${CACHE_PREFIX}-${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-${CACHE_VERSION}-runtime`;
@@ -22,7 +22,6 @@ self.addEventListener("install", (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(STATIC_CACHE);
     await Promise.allSettled(CORE_ASSETS.map((url) => cache.add(url)));
-    self.skipWaiting();
   })());
 });
 
