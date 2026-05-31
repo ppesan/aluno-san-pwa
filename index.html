@@ -22,28 +22,61 @@
 
   <main class="container">
 
-    <div id="installArea" style="text-align:center; margin: 16px;">
-      <button
-        id="installBtn"
-        style="
-          display:none;
-          background:#43933C;
-          color:#fff;
-          border:none;
-          border-radius:12px;
-          padding:12px 16px;
-          font-weight:800;
-          font-size:15px;
-          cursor:pointer;
-          box-shadow:0 2px 8px rgba(0,0,0,.15);
-        "
-      >
+    <section style="
+      display:flex;
+      gap:10px;
+      justify-content:center;
+      align-items:center;
+      flex-wrap:wrap;
+      margin:16px 0;
+    ">
+      <button id="installBtn" style="
+        display:none;
+        background:#43933C;
+        color:#fff;
+        border:none;
+        border-radius:14px;
+        padding:12px 16px;
+        font-weight:800;
+        font-size:15px;
+        cursor:pointer;
+        box-shadow:0 2px 8px rgba(0,0,0,.15);
+      ">
         📲 Instalar WebApp
       </button>
-    </div>
+
+      <button id="verAvisosBtn" style="
+        display:none;
+        background:#ffffff;
+        color:#2e7d32;
+        border:2px solid #43933C;
+        border-radius:14px;
+        padding:10px 16px;
+        font-weight:800;
+        font-size:15px;
+        cursor:pointer;
+        box-shadow:0 2px 8px rgba(0,0,0,.08);
+      ">
+        🔔 Ver avisos
+      </button>
+
+      <button id="updateAppBtn" style="
+        display:none;
+        background:#1f6feb;
+        color:#fff;
+        border:none;
+        border-radius:14px;
+        padding:12px 16px;
+        font-weight:800;
+        font-size:15px;
+        cursor:pointer;
+        box-shadow:0 2px 8px rgba(0,0,0,.15);
+      ">
+        🔄 Atualizar app
+      </button>
+    </section>
 
     <section class="list" id="modulesList"></section>
-
   </main>
 
   <div id="modalRoot"></div>
@@ -51,66 +84,6 @@
   <script src="/app.js"></script>
 
   <script>
-    let deferredPrompt = null;
-
-    const installBtn = document.getElementById("installBtn");
-
-    const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-
-    const isAndroid = /android/i.test(userAgent);
-    const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
-
-    const isStandalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      window.navigator.standalone === true;
-
-    if (!isStandalone && isIOS) {
-      installBtn.style.display = "inline-block";
-      installBtn.textContent = "📲 Como instalar no iPhone";
-      installBtn.onclick = () => {
-        window.location.href = "/instalar/";
-      };
-    }
-
-    if (!isStandalone && isAndroid) {
-      installBtn.style.display = "inline-block";
-      installBtn.textContent = "📲 Instalar WebApp";
-    }
-
-    window.addEventListener("beforeinstallprompt", (event) => {
-      event.preventDefault();
-      deferredPrompt = event;
-
-      if (!isStandalone && isAndroid) {
-        installBtn.style.display = "inline-block";
-        installBtn.textContent = "📲 Instalar WebApp";
-      }
-    });
-
-    installBtn.addEventListener("click", async () => {
-      if (isIOS) {
-        window.location.href = "/instalar/";
-        return;
-      }
-
-      if (!deferredPrompt) {
-        window.location.href = "/instalar/";
-        return;
-      }
-
-      deferredPrompt.prompt();
-
-      await deferredPrompt.userChoice;
-
-      deferredPrompt = null;
-      installBtn.style.display = "none";
-    });
-
-    window.addEventListener("appinstalled", () => {
-      deferredPrompt = null;
-      installBtn.style.display = "none";
-    });
-
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
         navigator.serviceWorker.register("/service-worker.js").catch(() => {});
