@@ -1,7 +1,8 @@
 /* aluno.san – app.js aluno */
 
 const CSV_URLS = {
-  itens: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSr4o5yxLQTP-MxL_gBjHC2LqsMbV8LdxlmOUG3VhGVUPMOy9m6n4pCMor4ghtHtDmLOYfkvGdIKCEA/pub?gid=1651715340&single=true&output=csv"
+  itens: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSr4o5yxLQTP-MxL_gBjHC2LqsMbV8LdxlmOUG3VhGVUPMOy9m6n4pCMor4ghtHtDmLOYfkvGdIKCEA/pub?gid=1651715340&single=true&output=csv",
+  avisos: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSr4o5yxLQTP-MxL_gBjHC2LqsMbV8LdxlmOUG3VhGVUPMOy9m6n4pCMor4ghtHtDmLOYfkvGdIKCEA/pub?gid=1684382034&single=true&output=csv"
 };
 
 const qs = new URLSearchParams(location.search);
@@ -143,7 +144,107 @@ function isProfessorArea(item) {
   );
 }
 
-async function load() {
+function showPopupAviso(aviso) {
+  const modalRoot = document.getElementById("modalRoot");
+  if (!modalRoot) return;
+
+  const titulo = safe(aviso.titulo || aviso.título || "Aviso");
+  const mensagem = safe(aviso.mensagem || aviso.texto || aviso.descricao || aviso.descrição);
+  const link = safe(aviso.link || aviso.url);
+  const textoBotao = safe(aviso.botao || aviso.botão || "Acessar");
+
+  if (!mensagem) return;
+
+  modalRoot.innerHTML = `
+    <div style="
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+    ">
+      <div style="
+        background: #fff;
+        width: min(440px, 100%);
+        border-radius: 18px;
+        padding: 22px;
+        box-shadow: 0 12px 35px rgba(0,0,0,.25);
+        font-family: system-ui, Arial, sans-serif;
+      ">
+        <h2 style="
+          margin: 0 0 10px;
+          font-size: 22px;
+          color: #2e7d32;
+        ">${titulo}</h2>
+
+        <div style="
+          color: #222;
+          font-size: 16px;
+          line-height: 1.45;
+          white-space: pre-line;
+          margin-bottom: 18px;
+        ">${mensagem}</div>
+
+        <div style="
+          display: flex;
+          gap: 10px;
+          justify-content: flex-end;
+          flex-wrap: wrap;
+        ">
+          <button id="closeAvisoBtn" style="
+            border: none;
+            background: #e8e8e8;
+            color: #222;
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-weight: 700;
+            cursor: pointer;
+          ">Fechar</button>
+
+          ${
+            link
+              ? `<a href="${link}" target="_blank" rel="noopener noreferrer" style="
+                  background: #43933C;
+                  color: #fff;
+                  text-decoration: none;
+                  border-radius: 10px;
+                  padding: 10px 14px;
+                  font-weight: 800;
+                ">${textoBotao}</a>`
+              : ""
+          }
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById("closeAvisoBtn").addEventListener("click", () => {
+    modalRoot.innerHTML = "";
+  });
+}
+
+async function loadAvisos() {
+  let avisos = [];
+
+  try {
+    avisos = await fetchCSV(CSV_URLS.avisos);
+  } catch (e) {
+    return;
+  }
+
+  const ativos = avisos
+    .filter((a) => truthy(a.ativo))
+    .sort((a, b) => numOr(a.ordem) - numOr(b.ordem));
+
+  if (!ativos.length) return;
+
+  showPopupAviso(ativos[0]);
+}
+
+async function loadModulos() {
   const list =
     document.getElementById("modulesList") ||
     document.getElementById("modules");
@@ -176,6 +277,11 @@ async function load() {
       })
     );
   });
+}
+
+async function load() {
+  await loadModulos();
+  await loadAvisos();
 }
 
 document.addEventListener("DOMContentLoaded", load);
