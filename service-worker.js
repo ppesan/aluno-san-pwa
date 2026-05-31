@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "aluno-san";
-const CACHE_VERSION = "v20260504-2";
+const CACHE_VERSION = "v20260531-1";
 
 const STATIC_CACHE = `${CACHE_PREFIX}-${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-${CACHE_VERSION}-runtime`;
@@ -15,8 +15,7 @@ const CORE_ASSETS = [
   "/instalar/",
   "/calculadora/",
   "/monitoria/",
-  "/turma/",
-  "/prof/"
+  "/turma/"
 ];
 
 self.addEventListener("install", (event) => {
@@ -30,6 +29,7 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
+
     await Promise.all(
       keys
         .filter((k) => k.startsWith(CACHE_PREFIX + "-") && k !== STATIC_CACHE && k !== RUNTIME_CACHE)
@@ -38,15 +38,24 @@ self.addEventListener("activate", (event) => {
 
     await self.clients.claim();
 
-    const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
-    clients.forEach((client) =>
-      client.postMessage({ type: "SW_ACTIVATED", version: CACHE_VERSION })
-    );
+    const clients = await self.clients.matchAll({
+      type: "window",
+      includeUncontrolled: true
+    });
+
+    clients.forEach((client) => {
+      client.postMessage({
+        type: "SW_ACTIVATED",
+        version: CACHE_VERSION
+      });
+    });
   })());
 });
 
 self.addEventListener("message", (event) => {
-  if (event.data && event.data.type === "SKIP_WAITING") self.skipWaiting();
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 function isSameOrigin(request) {
@@ -63,6 +72,7 @@ function isNavigation(request) {
 
 function isStaticAsset(request) {
   const url = new URL(request.url);
+
   return (
     request.method === "GET" &&
     isSameOrigin(request) &&
@@ -82,11 +92,16 @@ function isStaticAsset(request) {
 
 async function networkFirst(request) {
   const cache = await caches.open(RUNTIME_CACHE);
+
   try {
-    const fresh = await fetch(request, { cache: "no-store" });
+    const fresh = await fetch(request, {
+      cache: "no-store"
+    });
+
     if (isSameOrigin(request) && fresh && fresh.ok) {
       cache.put(request, fresh.clone());
     }
+
     return fresh;
   } catch {
     const cached = await cache.match(request);
@@ -94,6 +109,7 @@ async function networkFirst(request) {
 
     const staticCache = await caches.open(STATIC_CACHE);
     const fallback = await staticCache.match("/index.html");
+
     return fallback || Response.error();
   }
 }
@@ -104,7 +120,10 @@ async function staleWhileRevalidate(request) {
 
   const networkPromise = fetch(request)
     .then((fresh) => {
-      if (fresh && fresh.ok) cache.put(request, fresh.clone());
+      if (fresh && fresh.ok) {
+        cache.put(request, fresh.clone());
+      }
+
       return fresh;
     })
     .catch(() => null);
@@ -114,6 +133,7 @@ async function staleWhileRevalidate(request) {
 
 self.addEventListener("fetch", (event) => {
   const { request } = event;
+
   if (request.method !== "GET") return;
 
   const url = new URL(request.url);
