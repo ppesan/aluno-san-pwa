@@ -128,6 +128,21 @@ function canShowForAluno(accessValue) {
   );
 }
 
+function isProfessorArea(item) {
+  const id = lower(item.id);
+  const titulo = lower(item.titulo || item.modulo);
+  const url = lower(item.url);
+
+  return (
+    id === "area-prof" ||
+    id === "prof" ||
+    titulo === "área dos professores" ||
+    titulo === "area dos professores" ||
+    titulo.includes("professores") ||
+    url.includes("/prof")
+  );
+}
+
 async function load() {
   const list =
     document.getElementById("modulesList") ||
@@ -149,9 +164,7 @@ async function load() {
   const filtered = itens
     .filter((i) => truthy(i.ativo))
     .filter((i) => canShowForAluno(i.acesso))
-    .filter((i) => lower(i.id) !== "area-prof")
-    .filter((i) => lower(i.titulo) !== "área dos professores")
-    .filter((i) => lower(i.titulo) !== "area dos professores")
+    .filter((i) => !isProfessorArea(i))
     .sort((a, b) => numOr(a.ordem) - numOr(b.ordem));
 
   filtered.forEach((i) => {
