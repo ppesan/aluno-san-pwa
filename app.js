@@ -144,12 +144,41 @@ function isProfessorArea(item) {
   );
 }
 
+function getAvisoId(aviso) {
+  const id = safe(aviso.aviso_id || aviso.id);
+
+  if (id) return id;
+
+  return [
+    safe(aviso.titulo || aviso.título || "Aviso"),
+    safe(aviso.texto || aviso.mensagem || aviso.descricao || aviso.descrição)
+  ].join("|");
+}
+
+function avisoStorageKey(aviso) {
+  return `alunoSanAvisoVisto:${getAvisoId(aviso)}`;
+}
+
+function wasAvisoSeen(aviso) {
+  try {
+    return localStorage.getItem(avisoStorageKey(aviso)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markAvisoAsSeen(aviso) {
+  try {
+    localStorage.setItem(avisoStorageKey(aviso), "1");
+  } catch {}
+}
+
 function showPopupAviso(aviso) {
   const modalRoot = document.getElementById("modalRoot");
   if (!modalRoot) return;
 
   const titulo = safe(aviso.titulo || aviso.título || "Aviso");
-  const mensagem = safe(aviso.mensagem || aviso.texto || aviso.descricao || aviso.descrição);
+  const mensagem = safe(aviso.texto || aviso.mensagem || aviso.descricao || aviso.descrição);
   const link = safe(aviso.link || aviso.url);
   const textoBotao = safe(aviso.botao || aviso.botão || "Acessar");
 
@@ -206,7 +235,7 @@ function showPopupAviso(aviso) {
 
           ${
             link
-              ? `<a href="${link}" target="_blank" rel="noopener noreferrer" style="
+              ? `<a id="openAvisoLink" href="${link}" target="_blank" rel="noopener noreferrer" style="
                   background: #43933C;
                   color: #fff;
                   text-decoration: none;
@@ -222,8 +251,17 @@ function showPopupAviso(aviso) {
   `;
 
   document.getElementById("closeAvisoBtn").addEventListener("click", () => {
+    markAvisoAsSeen(aviso);
     modalRoot.innerHTML = "";
   });
+
+  const openAvisoLink = document.getElementById("openAvisoLink");
+
+  if (openAvisoLink) {
+    openAvisoLink.addEventListener("click", () => {
+      markAvisoAsSeen(aviso);
+    });
+  }
 }
 
 async function loadAvisos() {
@@ -237,6 +275,7 @@ async function loadAvisos() {
 
   const ativos = avisos
     .filter((a) => truthy(a.ativo))
+    .filter((a) => !wasAvisoSeen(a))
     .sort((a, b) => numOr(a.ordem) - numOr(b.ordem));
 
   if (!ativos.length) return;
